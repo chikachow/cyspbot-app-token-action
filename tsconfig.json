@@ -1,0 +1,11 @@
+{
+  "extends": ["@tsconfig/recommended", "@tsconfig/node24", "@tsconfig/strictest"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "rootDir": ".",
+    "skipLibCheck": false,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}
