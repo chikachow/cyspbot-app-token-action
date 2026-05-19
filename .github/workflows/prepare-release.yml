@@ -85,6 +85,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
+          TARGET_COMMIT: ${{ github.sha }}
         run: |
           prerelease_flags=()
 
@@ -92,4 +93,4 @@ jobs:
             prerelease_flags+=(--prerelease)
           fi
 
-          gh release create "${VERSION}" --target "${VERSION}" --verify-tag "${prerelease_flags[@]}"
+          gh release create "${VERSION}" --target "${TARGET_COMMIT}" --verify-tag "${prerelease_flags[@]}"
