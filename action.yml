@@ -1,0 +1,22 @@
+name: Get cyspbot GitHub token
+description: Obtain a short-lived repository-scoped GitHub installation token from cyspbot using GitHub Actions OIDC.
+
+inputs:
+  audience:
+    description: OIDC audience to request from GitHub Actions.
+    required: false
+    default: cyspbot
+  cyspbot-url:
+    description: Base URL for the cyspbot service.
+    required: false
+    default: https://cyspbot.chikachow.org
+
+outputs:
+  token:
+    description: Short-lived GitHub installation token for the calling repository.
+  expires_at:
+    description: Expiration timestamp for the minted installation token.
+
+runs:
+  using: node24
+  main: dist/index.js

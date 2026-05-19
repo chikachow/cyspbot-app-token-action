@@ -1,0 +1,37 @@
+{
+  "name": "cyspbot-action",
+  "version": "0.0.0",
+  "private": true,
+  "description": "GitHub Action for obtaining a short-lived repository-scoped token from cyspbot.",
+  "type": "module",
+  "scripts": {
+    "bundle": "node --run clean && tsdown",
+    "check": "node --run format:check && node --run lint && node --run typecheck && node --run test && node --run bundle",
+    "clean": "rm -rf dist",
+    "format": "oxfmt . '!dist'",
+    "format:check": "oxfmt --check . '!dist'",
+    "lint": "oxlint --type-aware --report-unused-disable-directives --ignore-pattern dist .",
+    "lint:fix": "oxlint --type-aware --fix --ignore-pattern dist .",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@actions/core": "1.11.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "24.0.4",
+    "@tsconfig/recommended": "1.0.13",
+    "@tsconfig/strictest": "2.0.8",
+    "@types/node": "24.12.2",
+    "oxfmt": "0.47.0",
+    "oxlint": "1.62.0",
+    "oxlint-tsgolint": "0.19.0",
+    "tsdown": "0.22.0",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": "24"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
