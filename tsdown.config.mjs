@@ -3,15 +3,15 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   clean: false,
   deps: {
-    alwaysBundle: ["@actions/core"],
+    alwaysBundle: [/.*/],
     onlyBundle: [
       "@actions/core",
       "@actions/exec",
       "@actions/http-client",
       "@actions/io",
-      "@fastify/busboy",
       "tunnel",
       "undici",
+      "zod",
     ],
   },
   entry: {
