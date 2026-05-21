@@ -1,0 +1,161 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: Publish a prerelease using the rc channel
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Validate release branch
+        env:
+          CURRENT_BRANCH: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "${CURRENT_BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
+            echo "Releases must be prepared from ${DEFAULT_BRANCH}, got ${CURRENT_BRANCH}" >&2
+            exit 1
+          fi
+
+      - name: Determine next version
+        id: version
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          latest_tag="$(
+            git tag --list \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1 \
+              || true
+          )"
+
+          if [[ -n "${latest_tag}" ]]; then
+            parent_line="$(git rev-list --parents -n 1 "${latest_tag}")"
+            read -r _ release_base _ <<<"${parent_line}"
+
+            if [[ -n "${release_base}" ]]; then
+              range="${release_base}..HEAD"
+              echo "Comparing conventional commits since ${latest_tag} (source commit ${release_base})"
+            else
+              range="${latest_tag}..HEAD"
+              echo "Latest release tag ${latest_tag} has no parent; comparing commits after the tagged root commit"
+            fi
+          else
+            range="HEAD"
+            echo "No previous semantic release tag found; using complete history"
+          fi
+
+          major=0
+          minor=0
+          patch=0
+          breaking_header_pattern='^[[:alpha:]][[:alnum:]-]*(\([^)]+\))?!:'
+          feat_pattern='^feat(\([^)]+\))?:'
+          patch_pattern='^(fix|perf)(\([^)]+\))?:'
+
+          while IFS= read -r -d '' subject && IFS= read -r -d '' body; do
+            if [[ "${subject}" =~ ${breaking_header_pattern} ]] || grep -Eq '(^|[[:space:]])BREAKING[ -]CHANGE:' <<<"${body}"; then
+              major=1
+              break
+            fi
+
+            if [[ "${subject}" =~ ${feat_pattern} ]]; then
+              minor=1
+              continue
+            fi
+
+            if [[ "${subject}" =~ ${patch_pattern} ]]; then
+              patch=1
+            fi
+          done < <(git log --reverse --format='%s%x00%B%x00' "${range}")
+
+          if (( major == 0 && minor == 0 && patch == 0 )); then
+            echo "No releasable conventional commits found since ${latest_tag:-repository start}" >&2
+            exit 1
+          fi
+
+          if [[ -n "${latest_tag}" ]]; then
+            version_core="${latest_tag#v}"
+          else
+            version_core="0.0.0"
+          fi
+
+          IFS=. read -r current_major current_minor current_patch <<<"${version_core}"
+
+          if (( current_major == 0 )); then
+            if (( major == 1 )); then
+              next_stable_version="v0.$((current_minor + 1)).0"
+            else
+              next_stable_version="v0.${current_minor}.$((current_patch + 1))"
+            fi
+          elif (( major == 1 )); then
+            next_stable_version="v$((current_major + 1)).0.0"
+          elif (( minor == 1 )); then
+            next_stable_version="v${current_major}.$((current_minor + 1)).0"
+          else
+            next_stable_version="v${current_major}.${current_minor}.$((current_patch + 1))"
+          fi
+
+          next_version="${next_stable_version}"
+
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            # shellcheck disable=SC2016
+            escaped_stable_version="$(printf '%s\n' "${next_stable_version}" | sed 's/[.[\*^$()+?{|]/\\&/g')"
+            latest_prerelease_tag="$(
+              git tag --list \
+                | grep -E "^${escaped_stable_version}-rc\\.[0-9]+$" \
+                | sort -V \
+                | tail -n 1 \
+                || true
+            )"
+
+            if [[ -n "${latest_prerelease_tag}" ]]; then
+              rc_number="${latest_prerelease_tag##*-rc.}"
+              next_version="${next_stable_version}-rc.$((rc_number + 1))"
+            else
+              next_version="${next_stable_version}-rc.1"
+            fi
+          fi
+
+          {
+            echo "version=${next_version}"
+            echo "previous_tag=${latest_tag}"
+          } >>"${GITHUB_OUTPUT}"
+
+          echo "Next version: ${next_version}"
+
+      - name: Dispatch prepare-release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          VERSION: ${{ steps.version.outputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          dispatch_flags=(
+            --ref "${REF_NAME}"
+            -f version="${VERSION}"
+            -f prerelease="${PRERELEASE}"
+          )
+
+          if [[ -n "${PREVIOUS_TAG}" ]]; then
+            dispatch_flags+=(-f previous-version="${PREVIOUS_TAG}")
+          fi
+
+          gh workflow run prepare-release.yml "${dispatch_flags[@]}"

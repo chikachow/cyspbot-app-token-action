@@ -84,16 +84,24 @@ node --run check
 - TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`, with local overrides only for repo-specific concerns such as test-time `.ts` imports and full library typechecking.
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.
 - CI verifies that source changes still build into a release artifact and that the workflows stay valid.
-- The `prepare-release` workflow creates a release-only commit containing `dist/index.js`, tags it as an immutable `vX.Y.Z` release, and then moves the plain compatibility tags `vX.Y` and `vX` for stable releases.
-- Consumers should pin immutable refs or a maintained major tag such as `v1`, not `main`.
+- The `release` workflow determines the next stable `vX.Y.Z` from conventional commits since the highest existing release tag, then dispatches `prepare-release`.
+- The `prepare-release` workflow creates a release-only commit containing `dist/index.js`, tags it with the requested release version, moves the plain compatibility tags `vX.Y` and `vX` for stable releases, and publishes a GitHub Release with generated notes.
+- Consumers should pin a specific release tag or a maintained major tag such as `v1`, not `main`.
 
 ## Releasing
 
 After changing `src/`:
 
 1. Run `node --run check`.
-2. Run the `prepare-release` workflow with a version such as `v1.2.3`.
-3. Let the workflow build `dist/index.js`, create the release-only commit, push the immutable `v1.2.3` tag, move the matching `v1.2` and `v1` tags for stable releases, and publish the GitHub release.
+2. Use conventional commits for releasable changes:
+   - for `v1+`, `feat:` bumps the minor version, `fix:` and `perf:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
+   - for `v0`, breaking changes bump the minor version, and changes that would otherwise bump minor or patch only bump the patch version
+   - automated releases stay on major version `0` until you manually move beyond it
+3. Run the `release` workflow from `main`.
+   - Leave `prerelease=false` for a stable `vX.Y.Z` release.
+   - Set `prerelease=true` to publish `vX.Y.Z-rc.N` on the single supported `rc` channel.
+4. Let the workflows determine the next version, build `dist/index.js`, create the release-only commit, push the release tag, move the matching `vX.Y` and `vX` tags for stable releases only, and publish the GitHub release with generated notes.
 
-`v1.2.3` is the immutable GitHub Release tag.
-`v1.2` and `v1` are movable Git tags only, so they are not locked by release immutability.
+`v1.2.3` is the stable release tag.
+`v1.2.3-rc.1` is an `rc` prerelease tag.
+`v1.2` and `v1` are compatibility tags that move forward on stable releases.

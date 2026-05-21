@@ -21,7 +21,9 @@ This repository owns the workflow-facing action client only. The hosted `cyspbot
 - `.github/workflows/ci.yml`
   - CI for formatting, linting, typechecking, tests, bundle verification, and `actionlint`
 - `.github/workflows/prepare-release.yml`
-  - manual release workflow that builds the bundled runtime, creates the immutable release tag, and updates compatibility tags
+  - dispatched release-preparation workflow that builds the bundled runtime, creates the requested release tag, updates compatibility tags, and publishes generated release notes
+- `.github/workflows/release.yml`
+  - manual release entrypoint that calculates the next semantic version from conventional commits since the highest existing release tag and dispatches `prepare-release`
 - `tsdown.config.mjs`
   - bundler configuration for the generated release runtime artifact
 - `tsconfig.json`
@@ -34,8 +36,8 @@ This repository owns the workflow-facing action client only. The hosted `cyspbot
 - The runtime artifact stays self-contained. Consumers do not install this repository's dependencies at action execution time.
 - The action exposes `token` and `expires_at` outputs and accepts `audience` and `cyspbot-url` inputs.
 - `main` is the source branch, not a supported consumer ref for `uses:`.
-- `vX.Y.Z` tags are GitHub Release tags and are intended to stay immutable.
-- `vX.Y` and `vX` tags are compatibility tags without corresponding GitHub Releases, so they can move forward to the latest compatible release commit.
+- `vX.Y.Z` tags are GitHub Release tags created by the release workflows.
+- `vX.Y` and `vX` tags are compatibility tags without corresponding GitHub Releases, so they move forward to the latest compatible stable release commit.
 
 ## Development workflow
 
@@ -50,8 +52,17 @@ Before publishing a change:
 
 ```bash
 node --run check
-gh workflow run prepare-release.yml -f version=v1.2.3 -f prerelease=false
+gh workflow run release.yml
 ```
+
+Release bump rules:
+
+- for `v1+`, `feat:` bumps the minor version, `fix:` and `perf:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
+- for `v0`, breaking changes bump the minor version, and changes that would otherwise bump minor or patch only bump the patch version
+- automated releases stay on major version `0` until a later version is chosen manually
+- set `prerelease=true` on `release.yml` to publish `vX.Y.Z-rc.N`; only the `rc` prerelease channel is supported
+- prereleases do not move the compatibility tags `vX.Y` and `vX`
+- other commit types do not trigger a release on their own
 
 ## Tooling posture
 
