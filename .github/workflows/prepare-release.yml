@@ -12,6 +12,10 @@ on:
         required: true
         default: false
         type: boolean
+      previous-version:
+        description: Previous release tag to use as the release notes start tag
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -41,10 +45,21 @@ jobs:
 
       - name: Validate requested version
         env:
+          PRERELEASE: ${{ inputs.prerelease }}
           VERSION: ${{ inputs.version }}
         run: |
-          if [[ ! "${VERSION}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "Expected version like v1.2.3, got ${VERSION}" >&2
+          if [[ ! "${VERSION}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
+            echo "Expected version like v1.2.3 or v1.2.3-rc.1, got ${VERSION}" >&2
+            exit 1
+          fi
+
+          if [[ "${PRERELEASE}" == "true" && ! "${VERSION}" =~ -rc\.([0-9]+)$ ]]; then
+            echo "Expected prerelease version like v1.2.3-rc.1 when prerelease=true, got ${VERSION}" >&2
+            exit 1
+          fi
+
+          if [[ "${PRERELEASE}" != "true" && "${VERSION}" =~ -rc\.([0-9]+)$ ]]; then
+            echo "Expected stable version like v1.2.3 when prerelease=false, got ${VERSION}" >&2
             exit 1
           fi
 
@@ -58,7 +73,7 @@ jobs:
           git add -f dist action.yml
           git commit -m "build(release): bundle ${VERSION}"
 
-      - name: Publish immutable release tag
+      - name: Publish release tag
         env:
           VERSION: ${{ inputs.version }}
         run: |
@@ -84,13 +99,25 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          PREVIOUS_VERSION: ${{ inputs.previous-version }}
           VERSION: ${{ inputs.version }}
           TARGET_COMMIT: ${{ github.sha }}
         run: |
+          notes_flags=(--generate-notes)
           prerelease_flags=()
 
           if [[ "${{ inputs.prerelease }}" == "true" ]]; then
             prerelease_flags+=(--prerelease)
           fi
 
-          gh release create "${VERSION}" --target "${TARGET_COMMIT}" --verify-tag "${prerelease_flags[@]}"
+          if [[ -n "${PREVIOUS_VERSION}" ]]; then
+            if [[ ! "${PREVIOUS_VERSION}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "Expected previous-version like v1.2.3, got ${PREVIOUS_VERSION}" >&2
+              exit 1
+            fi
+
+            git rev-parse --verify "refs/tags/${PREVIOUS_VERSION}" >/dev/null
+            notes_flags+=(--notes-start-tag "${PREVIOUS_VERSION}")
+          fi
+
+          gh release create "${VERSION}" --target "${TARGET_COMMIT}" --verify-tag "${notes_flags[@]}" "${prerelease_flags[@]}"
