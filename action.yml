@@ -1,5 +1,5 @@
-name: Get cyspbot GitHub token
-description: Obtain a short-lived repository-scoped GitHub installation token from cyspbot using GitHub Actions OIDC.
+name: Get cyspbot app token
+description: Obtain a short-lived repository-scoped GitHub App installation token from cyspbot using GitHub Actions OIDC.
 
 inputs:
   audience:
@@ -13,7 +13,7 @@ inputs:
 
 outputs:
   token:
-    description: Short-lived GitHub installation token for the calling repository.
+    description: Short-lived GitHub App installation token for the calling repository.
   expires_at:
     description: Expiration timestamp for the minted installation token.
 

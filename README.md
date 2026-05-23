@@ -1,6 +1,6 @@
-# cyspbot-action
+# cyspbot-app-token-action
 
-`cyspbot-action` is the reusable GitHub Action that obtains a short-lived repository-scoped GitHub installation token from `cyspbot.chikachow.org` using GitHub Actions OIDC.
+`cyspbot-app-token-action` is the reusable GitHub Action that obtains a short-lived repository-scoped GitHub App installation token from `cyspbot.chikachow.org` using GitHub Actions OIDC.
 
 This repository contains the action client. The hosted `cyspbot` service lives in the separate `cyspbot` repository.
 
@@ -16,7 +16,7 @@ permissions:
 steps:
   - name: Mint repository installation token
     id: cyspbot
-    uses: cysp/cyspbot-action@v1
+    uses: cysp/cyspbot-app-token-action@v1
 ```
 
 Outputs:
@@ -40,7 +40,7 @@ permissions:
   pull-requests: write
 
 steps:
-  - uses: cysp/cyspbot-action@v1
+  - uses: cysp/cyspbot-app-token-action@v1
     id: cyspbot
 
   - uses: peter-evans/create-pull-request@v8

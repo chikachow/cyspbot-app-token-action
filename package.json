@@ -1,8 +1,8 @@
 {
-  "name": "cyspbot-action",
+  "name": "cyspbot-app-token-action",
   "version": "0.0.0",
   "private": true,
-  "description": "GitHub Action for obtaining a short-lived repository-scoped token from cyspbot.",
+  "description": "GitHub Action for obtaining a short-lived repository-scoped app installation token from cyspbot.",
   "type": "module",
   "scripts": {
     "bundle": "node --run clean && tsdown",

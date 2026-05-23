@@ -1,10 +1,10 @@
 # Repository Guide
 
-This document describes the current structure, behavior, and maintenance expectations for `cyspbot-action`.
+This document describes the current structure, behavior, and maintenance expectations for `cyspbot-app-token-action`.
 
 ## Purpose
 
-`cyspbot-action` is the reusable GitHub Action client for `cyspbot`. It exchanges a GitHub Actions OIDC token for a short-lived repository-scoped GitHub installation token.
+`cyspbot-app-token-action` is the reusable GitHub Action client for `cyspbot`. It exchanges a GitHub Actions OIDC token for a short-lived repository-scoped GitHub App installation token.
 
 This repository owns the workflow-facing action client only. The hosted `cyspbot` implementation lives in the separate `cyspbot` repository.
 
@@ -101,7 +101,7 @@ permissions:
   pull-requests: write
 
 steps:
-  - uses: cysp/cyspbot-action@v1
+  - uses: cysp/cyspbot-app-token-action@v1
     id: cyspbot
 
   - uses: peter-evans/create-pull-request@v8
@@ -111,5 +111,5 @@ steps:
 
 ## Ownership boundary
 
-- `cyspbot-action` owns the reusable workflow-facing client.
+- `cyspbot-app-token-action` owns the reusable workflow-facing client.
 - `cyspbot` owns the hosted service implementation and deployment.
