@@ -30,8 +30,16 @@
     "tsdown": "0.22.0",
     "typescript": "6.0.3"
   },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "10.33.0",
+      "onFail": "error"
+    }
+  },
   "engines": {
-    "node": "24"
+    "node": "24",
+    "pnpm": "10.33.0"
   },
   "packageManager": "pnpm@10.33.0"
 }

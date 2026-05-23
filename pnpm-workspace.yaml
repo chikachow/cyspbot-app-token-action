@@ -1,0 +1,9 @@
+packages:
+  - "."
+
+autoInstallPeers: false
+engineStrict: true
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+pmOnFail: error
+verifyDepsBeforeRun: error

@@ -82,6 +82,7 @@ node --run check
 - The runtime artifact is bundled into `dist/index.js` on release publication, so consumers do not depend on install steps or runtime `node_modules` resolution.
 - The bundle is built with `tsdown`, configured to keep the GitHub Action artifact self-contained even though `tsdown` defaults are library-oriented.
 - TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`, with local overrides only for repo-specific concerns such as test-time `.ts` imports and full library typechecking.
+- pnpm configuration is enforced from `package.json` and `pnpm-workspace.yaml`: the repo declares Node and pnpm versions, installs fail on a mismatched pnpm version, respect dependency `engines` metadata, fail when `node_modules` is stale for `pnpm run` and `pnpm exec`, and reject packages published less than 24 hours ago.
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.
 - CI verifies that source changes still build into a release artifact and that the workflows stay valid.
 - The `release` workflow determines the next stable `vX.Y.Z` from conventional commits since the highest existing release tag, then dispatches `prepare-release`.
