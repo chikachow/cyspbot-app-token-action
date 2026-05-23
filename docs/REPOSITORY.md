@@ -69,6 +69,7 @@ Release bump rules:
 - TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`.
 - Local `tsconfig.json` overrides are intentionally narrow and repo-specific.
 - Full typechecking runs with `skipLibCheck: false`.
+- `package.json` and `pnpm-workspace.yaml` enforce package-manager policy: declare the supported Node and pnpm versions, fail on a pnpm version mismatch, honor dependency `engines` constraints, fail when `pnpm run` or `pnpm exec` would use stale `node_modules`, and require package releases to be at least 24 hours old.
 - `tsdown` emits `dist/index.js` as a bundled ESM artifact because the action targets the Node 24 runtime and the repository already uses an ESM package boundary.
 - The action source stays authored as modern NodeNext-style TypeScript, while the generated `dist/` artifact absorbs the GitHub Actions runtime compatibility requirement.
 - Tests run directly on the built-in `node:test` runner against the `.ts` sources.
