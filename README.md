@@ -94,7 +94,7 @@ After changing `src/`:
 
 1. Run `node --run check`.
 2. Use conventional commits for releasable changes:
-   - for `v1+`, `feat:` bumps the minor version, `fix:` and `perf:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
+   - for `v1+`, `feat:` bumps the minor version, `fix:`, `perf:`, and `chore:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
    - for `v0`, breaking changes bump the minor version, and changes that would otherwise bump minor or patch only bump the patch version
    - automated releases stay on major version `0` until you manually move beyond it
 3. Run the `release` workflow from `main`.

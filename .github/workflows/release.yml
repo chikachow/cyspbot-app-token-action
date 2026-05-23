@@ -67,7 +67,7 @@ jobs:
           patch=0
           breaking_header_pattern='^[[:alpha:]][[:alnum:]-]*(\([^)]+\))?!:'
           feat_pattern='^feat(\([^)]+\))?:'
-          patch_pattern='^(fix|perf)(\([^)]+\))?:'
+          patch_pattern='^(fix|perf|chore)(\([^)]+\))?:'
 
           while IFS= read -r -d '' subject && IFS= read -r -d '' body; do
             if [[ "${subject}" =~ ${breaking_header_pattern} ]] || grep -Eq '(^|[[:space:]])BREAKING[ -]CHANGE:' <<<"${body}"; then

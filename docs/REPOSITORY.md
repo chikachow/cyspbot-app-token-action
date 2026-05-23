@@ -57,12 +57,11 @@ gh workflow run release.yml
 
 Release bump rules:
 
-- for `v1+`, `feat:` bumps the minor version, `fix:` and `perf:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
+- for `v1+`, `feat:` bumps the minor version, `fix:`, `perf:`, and `chore:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
 - for `v0`, breaking changes bump the minor version, and changes that would otherwise bump minor or patch only bump the patch version
 - automated releases stay on major version `0` until a later version is chosen manually
 - set `prerelease=true` on `release.yml` to publish `vX.Y.Z-rc.N`; only the `rc` prerelease channel is supported
 - prereleases do not move the compatibility tags `vX.Y` and `vX`
-- other commit types do not trigger a release on their own
 
 ## Tooling posture
 
