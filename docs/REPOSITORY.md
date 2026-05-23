@@ -8,6 +8,8 @@ This document describes the current structure, behavior, and maintenance expecta
 
 This repository owns the workflow-facing action client only. The hosted `cyspbot` implementation lives in the separate `cyspbot` repository.
 
+For local development, release steps, and tooling conventions, see [`DEVELOPMENT.md`](DEVELOPMENT.md).
+
 ## Repository shape
 
 - `action.yml`
@@ -38,40 +40,6 @@ This repository owns the workflow-facing action client only. The hosted `cyspbot
 - `main` is the source branch, not a supported consumer ref for `uses:`.
 - `vX.Y.Z` tags are GitHub Release tags created by the release workflows.
 - `vX.Y` and `vX` tags are compatibility tags without corresponding GitHub Releases, so they move forward to the latest compatible stable release commit.
-
-## Development workflow
-
-Use:
-
-```bash
-pnpm install
-node --run check
-```
-
-Before publishing a change:
-
-```bash
-node --run check
-gh workflow run release.yml
-```
-
-Release bump rules:
-
-- for `v1+`, `feat:` bumps the minor version, `fix:`, `perf:`, and `chore:` bump the patch version, and any conventional commit header with `!:` such as `type!:` or `type(scope)!:`, or a `BREAKING CHANGE:` footer, bumps the major version
-- for `v0`, breaking changes bump the minor version, and changes that would otherwise bump minor or patch only bump the patch version
-- automated releases stay on major version `0` until a later version is chosen manually
-- set `prerelease=true` on `release.yml` to publish `vX.Y.Z-rc.N`; only the `rc` prerelease channel is supported
-- prereleases do not move the compatibility tags `vX.Y` and `vX`
-
-## Tooling posture
-
-- TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`.
-- Local `tsconfig.json` overrides are intentionally narrow and repo-specific.
-- Full typechecking runs with `skipLibCheck: false`.
-- `package.json` and `pnpm-workspace.yaml` enforce package-manager policy: declare the supported Node and pnpm versions, fail on a pnpm version mismatch, honor dependency `engines` constraints, fail when `pnpm run` or `pnpm exec` would use stale `node_modules`, and require package releases to be at least 24 hours old.
-- `tsdown` emits `dist/index.js` as a bundled ESM artifact because the action targets the Node 24 runtime and the repository already uses an ESM package boundary.
-- The action source stays authored as modern NodeNext-style TypeScript, while the generated `dist/` artifact absorbs the GitHub Actions runtime compatibility requirement.
-- Tests run directly on the built-in `node:test` runner against the `.ts` sources.
 
 ## Why this repository uses a JavaScript action
 
