@@ -103,7 +103,7 @@ void describe("runAction", () => {
     assert.deepEqual(setOutputMock.mock.calls[0]?.arguments, ["token", "ghs_token"]);
     assert.deepEqual(setOutputMock.mock.calls[1]?.arguments, [
       "expires_at",
-      "2030-01-01T01:00:00.000Z",
+      "2030-01-01T01:00:00Z",
     ]);
   });
 
@@ -178,6 +178,54 @@ void describe("runAction", () => {
 
     await assert.rejects(runAction(dependencies), {
       message: "cyspbot response access_token is missing or invalid",
+    });
+  });
+
+  void it("rejects token responses without a valid expires_in", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async () => {
+        return Response.json({
+          access_token: "ghs_token",
+          issued_token_type: "urn:chikachow:github-app-installation-access-token",
+          token_type: "Bearer",
+        });
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot response expires_in is missing or invalid",
+    });
+  });
+
+  void it("rejects token responses without the expected issued_token_type", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async () => {
+        return Response.json({
+          access_token: "ghs_token",
+          expires_in: 3600,
+          token_type: "Bearer",
+        });
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot response issued_token_type is missing or invalid",
+    });
+  });
+
+  void it("rejects token responses without a bearer token_type", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async () => {
+        return Response.json({
+          access_token: "ghs_token",
+          expires_in: 3600,
+          issued_token_type: "urn:chikachow:github-app-installation-access-token",
+        });
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot response token_type is missing or invalid",
     });
   });
 
