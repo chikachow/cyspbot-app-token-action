@@ -69,7 +69,10 @@ jobs:
           feat_pattern='^feat(\([^)]+\))?:'
           patch_pattern='^(fix|perf|chore)(\([^)]+\))?:'
 
-          while IFS= read -r -d '' subject && IFS= read -r -d '' body; do
+          while IFS= read -r commit; do
+            subject="$(git show -s --format='%s' "${commit}")"
+            body="$(git show -s --format='%B' "${commit}")"
+
             if [[ "${subject}" =~ ${breaking_header_pattern} ]] || grep -Eq '(^|[[:space:]])BREAKING[ -]CHANGE:' <<<"${body}"; then
               major=1
               break
@@ -83,7 +86,7 @@ jobs:
             if [[ "${subject}" =~ ${patch_pattern} ]]; then
               patch=1
             fi
-          done < <(git log --reverse --format='%s%x00%B%x00' "${range}")
+          done < <(git log --reverse --format='%H' "${range}")
 
           if (( major == 0 && minor == 0 && patch == 0 )); then
             echo "No releasable conventional commits found since ${latest_tag:-repository start}" >&2
