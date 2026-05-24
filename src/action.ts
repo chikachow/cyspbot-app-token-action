@@ -105,7 +105,7 @@ function parseTokenResponse(value: unknown, now: Date): TokenResponse {
   const result = oauthTokenResponseSchema.safeParse(value);
   if (result.success) {
     return {
-      expiresAt: new Date(now.getTime() + result.data.expires_in * 1_000).toISOString(),
+      expiresAt: toSecondPrecisionIso(new Date(now.getTime() + result.data.expires_in * 1_000)),
       token: result.data.access_token,
     };
   }
@@ -135,6 +135,10 @@ function parseTokenResponse(value: unknown, now: Date): TokenResponse {
 
 function isJsonObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toSecondPrecisionIso(date: Date): string {
+  return date.toISOString().replace(/\.\d{3}Z$/u, "Z");
 }
 
 function normalizeInput(value: string): string | null {
