@@ -4,20 +4,25 @@ import { z } from "zod";
 const defaultAudience = "cyspbot";
 const defaultCyspbotUrl = "https://cyspbot.chikachow.org";
 const defaultCyspbotTimeoutMs = 10_000;
+const githubInstallationAccessTokenType = "urn:chikachow:github-app-installation-access-token";
+const oidcIdTokenType = "urn:ietf:params:oauth:token-type:id_token";
+const tokenExchangeGrantType = "urn:ietf:params:oauth:grant-type:token-exchange";
 
 interface TokenResponse {
-  expires_at: string;
+  expiresAt: string;
   token: string;
 }
 
-const tokenResponseSchema = z.object({
-  expires_at: z.string().min(1),
-  token: z.string().min(1),
+const oauthTokenResponseSchema = z.object({
+  access_token: z.string().min(1),
+  expires_in: z.number().int().positive(),
+  issued_token_type: z.literal(githubInstallationAccessTokenType),
+  token_type: z.literal("Bearer"),
 });
 
-const problemResponseSchema = z.object({
-  detail: z.string().min(1).optional(),
-  title: z.string().min(1).optional(),
+const oauthErrorResponseSchema = z.object({
+  error: z.string().min(1),
+  error_description: z.string().min(1).optional(),
 });
 
 export interface ActionDependencies {
@@ -25,6 +30,7 @@ export interface ActionDependencies {
   fetch: typeof fetch;
   getIDToken(audience?: string): Promise<string>;
   getInput(name: string): string;
+  now(): Date;
   setOutput(name: string, value: string): void;
   setSecret(value: string): void;
 }
@@ -41,10 +47,18 @@ export async function runAction(
   }
 
   const oidcToken = await dependencies.getIDToken(audience);
-  const response = await dependencies.fetch(new URL("/github/installations/token", cyspbotUrl), {
+
+  const body = new URLSearchParams({
+    grant_type: tokenExchangeGrantType,
+    requested_token_type: githubInstallationAccessTokenType,
+    subject_token: oidcToken,
+    subject_token_type: oidcIdTokenType,
+  });
+  const response = await dependencies.fetch(new URL("/token", cyspbotUrl), {
+    body,
     headers: {
       accept: "application/json",
-      authorization: `Bearer ${oidcToken}`,
+      "content-type": "application/x-www-form-urlencoded",
     },
     method: "POST",
     signal: dependencies.createTimeoutSignal(defaultCyspbotTimeoutMs),
@@ -54,53 +68,66 @@ export async function runAction(
     throw new Error(await cyspbotRequestFailureMessage(response));
   }
 
-  const tokenResponse = parseTokenResponse(await response.json());
+  const tokenResponse = parseTokenResponse(await response.json(), dependencies.now());
   dependencies.setSecret(tokenResponse.token);
   dependencies.setOutput("token", tokenResponse.token);
-  dependencies.setOutput("expires_at", tokenResponse.expires_at);
+  dependencies.setOutput("expires_at", tokenResponse.expiresAt);
 }
 
 async function cyspbotRequestFailureMessage(response: Response): Promise<string> {
   const contentType = response.headers.get("content-type");
 
-  if (contentType?.includes("application/problem+json") === true) {
+  if (contentType?.includes("application/json") === true) {
     const parsedBody = await response
       .json()
-      .then((value: unknown) => problemResponseSchema.safeParse(value))
+      .then((value: unknown) => oauthErrorResponseSchema.safeParse(value))
       .catch(() => null);
 
     if (parsedBody === null || !parsedBody.success) {
-      return `cyspbot request failed with ${response.status}: invalid application/problem+json body`;
+      return `cyspbot token exchange failed with ${response.status}: invalid OAuth error body`;
     }
 
-    const title = parsedBody.data.title ?? "Request failed";
-    const detail = parsedBody.data.detail === undefined ? "" : `: ${parsedBody.data.detail}`;
+    const description =
+      parsedBody.data.error_description === undefined
+        ? ""
+        : `: ${parsedBody.data.error_description}`;
 
-    return `cyspbot request failed with ${response.status} ${title}${detail}`;
+    return `cyspbot token exchange failed with ${response.status} ${parsedBody.data.error}${description}`;
   }
 
   const fallbackBodyText = await response.text();
   const suffix = fallbackBodyText.length > 0 ? `: ${fallbackBodyText}` : "";
 
-  return `cyspbot request failed with ${response.status}${suffix}`;
+  return `cyspbot token exchange failed with ${response.status}${suffix}`;
 }
 
-function parseTokenResponse(value: unknown): TokenResponse {
-  const result = tokenResponseSchema.safeParse(value);
+function parseTokenResponse(value: unknown, now: Date): TokenResponse {
+  const result = oauthTokenResponseSchema.safeParse(value);
   if (result.success) {
-    return result.data;
+    return {
+      expiresAt: new Date(now.getTime() + result.data.expires_in * 1_000).toISOString(),
+      token: result.data.access_token,
+    };
   }
 
   if (!isJsonObject(value)) {
     throw new Error("cyspbot returned a non-object response");
   }
 
-  if (result.error.issues.some((issue) => issue.path[0] === "token")) {
-    throw new Error("cyspbot response token is missing or invalid");
+  if (result.error.issues.some((issue) => issue.path[0] === "access_token")) {
+    throw new Error("cyspbot response access_token is missing or invalid");
   }
 
-  if (result.error.issues.some((issue) => issue.path[0] === "expires_at")) {
-    throw new Error("cyspbot response expires_at is missing or invalid");
+  if (result.error.issues.some((issue) => issue.path[0] === "expires_in")) {
+    throw new Error("cyspbot response expires_in is missing or invalid");
+  }
+
+  if (result.error.issues.some((issue) => issue.path[0] === "issued_token_type")) {
+    throw new Error("cyspbot response issued_token_type is missing or invalid");
+  }
+
+  if (result.error.issues.some((issue) => issue.path[0] === "token_type")) {
+    throw new Error("cyspbot response token_type is missing or invalid");
   }
 
   throw new Error("cyspbot returned an invalid response");
@@ -120,6 +147,7 @@ const defaultDependencies: ActionDependencies = {
   fetch,
   getIDToken: (audience?: string) => core.getIDToken(audience),
   getInput: (name: string) => core.getInput(name),
+  now: () => new Date(),
   setOutput: (name: string, value: string) => core.setOutput(name, value),
   setSecret: (value: string) => core.setSecret(value),
 };

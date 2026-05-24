@@ -9,11 +9,13 @@ interface MockedDependencies {
   fetchMock: ReturnType<typeof mock.fn>;
   getIDTokenMock: ReturnType<typeof mock.fn>;
   getInputMock: ReturnType<typeof mock.fn>;
+  nowMock: ReturnType<typeof mock.fn>;
   setOutputMock: ReturnType<typeof mock.fn>;
   setSecretMock: ReturnType<typeof mock.fn>;
 }
 
 function createDependencies(overrides?: Partial<ActionDependencies>): MockedDependencies {
+  const now = new Date("2030-01-01T00:00:00Z");
   const timeoutSignal = AbortSignal.abort("timeout");
   const createTimeoutSignalMock = mock.fn<ActionDependencies["createTimeoutSignal"]>(
     (timeoutMs: number) => {
@@ -36,6 +38,7 @@ function createDependencies(overrides?: Partial<ActionDependencies>): MockedDepe
   });
   const setOutputMock = mock.fn<ActionDependencies["setOutput"]>();
   const setSecretMock = mock.fn<ActionDependencies["setSecret"]>();
+  const nowMock = mock.fn<ActionDependencies["now"]>(() => now);
 
   return {
     dependencies: {
@@ -43,6 +46,7 @@ function createDependencies(overrides?: Partial<ActionDependencies>): MockedDepe
       fetch: fetchMock,
       getIDToken: getIDTokenMock,
       getInput: getInputMock,
+      now: nowMock,
       setOutput: setOutputMock,
       setSecret: setSecretMock,
       ...overrides,
@@ -51,6 +55,7 @@ function createDependencies(overrides?: Partial<ActionDependencies>): MockedDepe
     fetchMock,
     getIDTokenMock,
     getInputMock,
+    nowMock,
     setOutputMock,
     setSecretMock,
   };
@@ -61,15 +66,28 @@ void describe("runAction", () => {
     const fetchImplementation: ActionDependencies["fetch"] = async (input, init) => {
       assert.equal(
         input instanceof URL ? input.toString() : input,
-        "https://cyspbot.chikachow.org/github/installations/token",
+        "https://cyspbot.chikachow.org/token",
       );
       assert.equal(init?.method, "POST");
-      assert.equal(new Headers(init?.headers).get("authorization"), "Bearer oidc-token");
+      assert.equal(
+        new Headers(init?.headers).get("content-type"),
+        "application/x-www-form-urlencoded",
+      );
       assert.equal(init?.signal?.aborted, true);
 
+      const body = new URLSearchParams(init?.body as string);
+      assert.deepEqual(Object.fromEntries(body), {
+        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+        requested_token_type: "urn:chikachow:github-app-installation-access-token",
+        subject_token: "oidc-token",
+        subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
+      });
+
       return Response.json({
-        expires_at: "2030-01-01T00:00:00Z",
-        token: "ghs_token",
+        access_token: "ghs_token",
+        expires_in: 3600,
+        issued_token_type: "urn:chikachow:github-app-installation-access-token",
+        token_type: "Bearer",
       });
     };
 
@@ -85,7 +103,7 @@ void describe("runAction", () => {
     assert.deepEqual(setOutputMock.mock.calls[0]?.arguments, ["token", "ghs_token"]);
     assert.deepEqual(setOutputMock.mock.calls[1]?.arguments, [
       "expires_at",
-      "2030-01-01T00:00:00Z",
+      "2030-01-01T01:00:00.000Z",
     ]);
   });
 
@@ -93,8 +111,10 @@ void describe("runAction", () => {
     const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(async () => {
         return Response.json({
-          expires_at: "2030-01-01T00:00:00Z",
-          token: "ghs_token",
+          access_token: "ghs_token",
+          expires_in: 3600,
+          issued_token_type: "urn:chikachow:github-app-installation-access-token",
+          token_type: "Bearer",
         });
       }),
       getInput: mock.fn(() => "   "),
@@ -105,36 +125,35 @@ void describe("runAction", () => {
     assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
   });
 
-  void it("surfaces problem details errors from cyspbot", async () => {
+  void it("surfaces OAuth errors from cyspbot", async () => {
     const { dependencies } = createDependencies({
       fetch: mock.fn(async () => {
         return new Response(
           JSON.stringify({
-            detail: "event not allowed",
-            title: "Forbidden",
-            type: "about:blank",
+            error: "invalid_target",
+            error_description: "event not allowed",
           }),
           {
             headers: {
-              "content-type": "application/problem+json",
+              "content-type": "application/json",
             },
-            status: 403,
+            status: 400,
           },
         );
       }),
     });
 
     await assert.rejects(runAction(dependencies), {
-      message: "cyspbot request failed with 403 Forbidden: event not allowed",
+      message: "cyspbot token exchange failed with 400 invalid_target: event not allowed",
     });
   });
 
-  void it("reports invalid problem bodies without cloning the response", async () => {
+  void it("reports invalid OAuth error bodies without cloning the response", async () => {
     const { dependencies } = createDependencies({
       fetch: mock.fn(async () => {
         return new Response("<html>gateway error</html>", {
           headers: {
-            "content-type": "application/problem+json",
+            "content-type": "application/json",
           },
           status: 502,
         });
@@ -142,7 +161,7 @@ void describe("runAction", () => {
     });
 
     await assert.rejects(runAction(dependencies), {
-      message: "cyspbot request failed with 502: invalid application/problem+json body",
+      message: "cyspbot token exchange failed with 502: invalid OAuth error body",
     });
   });
 
@@ -150,13 +169,15 @@ void describe("runAction", () => {
     const { dependencies } = createDependencies({
       fetch: mock.fn(async () => {
         return Response.json({
-          expires_at: "2030-01-01T00:00:00Z",
+          expires_in: 3600,
+          issued_token_type: "urn:chikachow:github-app-installation-access-token",
+          token_type: "Bearer",
         });
       }),
     });
 
     await assert.rejects(runAction(dependencies), {
-      message: "cyspbot response token is missing or invalid",
+      message: "cyspbot response access_token is missing or invalid",
     });
   });
 

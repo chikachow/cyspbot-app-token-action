@@ -15,7 +15,7 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `action.yml`
   - action contract consumed by workflows
 - `src/action.ts`
-  - cyspbot request flow, response validation, and injectable dependencies for tests
+  - cyspbot OAuth token-exchange request flow, response validation, and injectable dependencies for tests
 - `src/main.ts`
   - GitHub Actions entrypoint that reports failures through `core.setFailed(...)`
 - `test/action.test.ts`
@@ -56,7 +56,7 @@ The logic is small, but a JavaScript action is the right fit here because it giv
 2. Keep examples aligned with the inputs and outputs declared in `action.yml`.
 3. Keep `cyspbot` implementation details in the `cyspbot` repository, not here.
 4. Keep the action self-contained. Do not introduce runtime dependence on consumer-side `node_modules`.
-5. Preserve the current response validation behavior: cyspbot responses must be JSON objects with string `token` and `expires_at` properties.
+5. Preserve strict response validation: cyspbot `/token` responses must be JSON objects with string `access_token`, integer `expires_in`, the expected GitHub installation token type, and `token_type: Bearer`.
 6. Treat release preparation as the point where `dist/index.js` becomes part of the public contract.
 7. Do not create GitHub Releases for the movable `vX.Y` or `vX` compatibility tags.
 
