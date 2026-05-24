@@ -16,7 +16,7 @@ permissions:
 steps:
   - name: Mint repository installation token
     id: cyspbot
-    uses: cysp/cyspbot-app-token-action@v1
+    uses: chikachow/cyspbot-app-token-action@v1
 ```
 
 Outputs:
@@ -40,7 +40,7 @@ permissions:
   pull-requests: write
 
 steps:
-  - uses: cysp/cyspbot-app-token-action@v1
+  - uses: chikachow/cyspbot-app-token-action@v1
     id: cyspbot
 
   - uses: peter-evans/create-pull-request@v8
