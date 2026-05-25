@@ -52,7 +52,7 @@ The logic is small, but a JavaScript action is the right fit here because it giv
 
 ## Maintenance expectations
 
-1. Keep `node --run check` green so release preparation can generate `dist/index.js` from source without manual fixes.
+1. Keep `pnpm run check` green so release preparation can generate `dist/index.js` from source without manual fixes.
 2. Keep examples aligned with the inputs and outputs declared in `action.yml`.
 3. Keep `cyspbot` implementation details in the `cyspbot` repository, not here.
 4. Keep the action self-contained. Do not introduce runtime dependence on consumer-side `node_modules`.
