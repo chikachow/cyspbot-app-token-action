@@ -28,6 +28,8 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
   - manual release entrypoint that calculates the next semantic version from conventional commits since the highest existing release tag and dispatches `prepare-release`
 - `tsdown.config.mjs`
   - bundler configuration for the generated release runtime artifact
+- `scripts/verify-bundle.mjs`
+  - post-build check that rejects non-builtin runtime imports from the generated action bundle
 - `tsconfig.json`
   - project TypeScript policy
 

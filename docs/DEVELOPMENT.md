@@ -29,12 +29,13 @@ node --run check
 - typecheck
 - tests
 - the release bundle still builds from source
+- the generated bundle imports only Node.js built-ins at runtime
 
 ## Engineering conventions
 
 - The action uses GitHub's OIDC support through `@actions/core.getIDToken(...)` instead of manually reading undocumented internals.
 - The runtime artifact is bundled into `dist/index.js` on release publication, so consumers do not depend on install steps or runtime `node_modules` resolution.
-- The bundle is built with `tsdown`, configured to keep the GitHub Action artifact self-contained even though `tsdown` defaults are library-oriented.
+- The bundle is built with `tsdown`, configured to keep the GitHub Action artifact self-contained even though `tsdown` defaults are library-oriented. The bundle check rejects package or relative runtime imports in `dist/index.js`.
 - TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`, with local overrides only for repo-specific concerns such as test-time `.ts` imports and full library typechecking.
 - pnpm configuration is enforced from `package.json` and `pnpm-workspace.yaml`: the repo declares Node and pnpm versions, installs fail on a mismatched pnpm version, respect dependency `engines` metadata, fail when `node_modules` is stale for `pnpm run` and `pnpm exec`, and reject packages published less than 24 hours ago.
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.

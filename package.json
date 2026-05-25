@@ -5,7 +5,7 @@
   "description": "GitHub Action for obtaining a short-lived repository-scoped app installation token from cyspbot.",
   "type": "module",
   "scripts": {
-    "bundle": "node --run clean && tsdown",
+    "bundle": "node --run clean && tsdown && node --run verify:bundle",
     "check": "node --run format:check && node --run lint && node --run typecheck && node --run test && node --run bundle",
     "clean": "rm -rf dist",
     "format": "oxfmt . '!dist'",
@@ -13,7 +13,8 @@
     "lint": "oxlint --type-aware --report-unused-disable-directives --ignore-pattern dist .",
     "lint:fix": "oxlint --type-aware --fix --ignore-pattern dist .",
     "test": "node --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:bundle": "node scripts/verify-bundle.mjs dist/index.js"
   },
   "dependencies": {
     "@actions/core": "3.0.1",
