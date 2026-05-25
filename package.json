@@ -5,15 +5,15 @@
   "description": "GitHub Action for obtaining a short-lived repository-scoped app installation token from cyspbot.",
   "type": "module",
   "scripts": {
-    "bundle": "node --run clean && tsdown",
-    "check": "node --run format:check && node --run lint && node --run typecheck && node --run test && node --run bundle",
+    "bundle": "pnpm run clean && pnpm exec tsdown",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run bundle",
     "clean": "rm -rf dist",
-    "format": "oxfmt . '!dist'",
-    "format:check": "oxfmt --check . '!dist'",
-    "lint": "oxlint --type-aware --report-unused-disable-directives --ignore-pattern dist .",
-    "lint:fix": "oxlint --type-aware --fix --ignore-pattern dist .",
-    "test": "node --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "format": "pnpm exec oxfmt . '!dist'",
+    "format:check": "pnpm exec oxfmt --check . '!dist'",
+    "lint": "pnpm exec oxlint --type-aware --report-unused-disable-directives --ignore-pattern dist .",
+    "lint:fix": "pnpm exec oxlint --type-aware --fix --ignore-pattern dist .",
+    "test": "pnpm exec node --test test/*.test.ts",
+    "typecheck": "pnpm exec tsc --noEmit"
   },
   "dependencies": {
     "@actions/core": "3.0.1",
