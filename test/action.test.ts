@@ -148,6 +148,50 @@ void describe("runAction", () => {
     });
   });
 
+  void it("surfaces OAuth errors from case-insensitive JSON content types", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_request",
+          }),
+          {
+            headers: {
+              "content-type": "Application/JSON; charset=utf-8",
+            },
+            status: 400,
+          },
+        );
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot token exchange failed with 400 invalid_request",
+    });
+  });
+
+  void it("surfaces OAuth errors from structured JSON content types", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            error: "temporarily_unavailable",
+          }),
+          {
+            headers: {
+              "content-type": "application/problem+json",
+            },
+            status: 503,
+          },
+        );
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot token exchange failed with 503 temporarily_unavailable",
+    });
+  });
+
   void it("reports invalid OAuth error bodies without cloning the response", async () => {
     const { dependencies } = createDependencies({
       fetch: mock.fn(async () => {
@@ -162,6 +206,23 @@ void describe("runAction", () => {
 
     await assert.rejects(runAction(dependencies), {
       message: "cyspbot token exchange failed with 502: invalid OAuth error body",
+    });
+  });
+
+  void it("does not include non-JSON error bodies in failure messages", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async () => {
+        return new Response("upstream body with sensitive details", {
+          headers: {
+            "content-type": "text/plain",
+          },
+          status: 502,
+        });
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot token exchange failed with 502: non-JSON response",
     });
   });
 

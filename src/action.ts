@@ -77,7 +77,7 @@ export async function runAction(
 async function cyspbotRequestFailureMessage(response: Response): Promise<string> {
   const contentType = response.headers.get("content-type");
 
-  if (contentType?.includes("application/json") === true) {
+  if (isJsonContentType(contentType)) {
     const parsedBody = await response
       .json()
       .then((value: unknown) => oauthErrorResponseSchema.safeParse(value))
@@ -95,10 +95,19 @@ async function cyspbotRequestFailureMessage(response: Response): Promise<string>
     return `cyspbot token exchange failed with ${response.status} ${parsedBody.data.error}${description}`;
   }
 
-  const fallbackBodyText = await response.text();
-  const suffix = fallbackBodyText.length > 0 ? `: ${fallbackBodyText}` : "";
+  return `cyspbot token exchange failed with ${response.status}: non-JSON response`;
+}
 
-  return `cyspbot token exchange failed with ${response.status}${suffix}`;
+function isJsonContentType(contentType: string | null): boolean {
+  if (contentType === null) {
+    return false;
+  }
+
+  const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase();
+  return (
+    mediaType === "application/json" ||
+    (mediaType?.startsWith("application/") === true && mediaType.endsWith("+json"))
+  );
 }
 
 function parseTokenResponse(value: unknown, now: Date): TokenResponse {
