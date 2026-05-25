@@ -4,15 +4,7 @@ export default defineConfig({
   clean: false,
   deps: {
     alwaysBundle: [/.*/],
-    onlyBundle: [
-      "@actions/core",
-      "@actions/exec",
-      "@actions/http-client",
-      "@actions/io",
-      "tunnel",
-      "undici",
-      "zod",
-    ],
+    onlyBundle: false,
   },
   entry: {
     index: "src/main.ts",
