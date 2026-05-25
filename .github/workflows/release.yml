@@ -113,6 +113,7 @@ jobs:
           fi
 
           next_version="${next_stable_version}"
+          artifact_compare_tag="${latest_tag}"
 
           if [[ "${PRERELEASE}" == "true" ]]; then
             # shellcheck disable=SC2016
@@ -128,6 +129,7 @@ jobs:
             if [[ -n "${latest_prerelease_tag}" ]]; then
               rc_number="${latest_prerelease_tag##*-rc.}"
               next_version="${next_stable_version}-rc.$((rc_number + 1))"
+              artifact_compare_tag="${latest_prerelease_tag}"
             else
               next_version="${next_stable_version}-rc.1"
             fi
@@ -136,6 +138,7 @@ jobs:
           {
             echo "version=${next_version}"
             echo "previous_tag=${latest_tag}"
+            echo "artifact_compare_tag=${artifact_compare_tag}"
           } >>"${GITHUB_OUTPUT}"
 
           echo "Next version: ${next_version}"
@@ -143,6 +146,7 @@ jobs:
       - name: Dispatch prepare-release workflow
         env:
           GH_TOKEN: ${{ github.token }}
+          ARTIFACT_COMPARE_TAG: ${{ steps.version.outputs.artifact_compare_tag }}
           PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
           PRERELEASE: ${{ inputs.prerelease }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -156,6 +160,10 @@ jobs:
 
           if [[ -n "${PREVIOUS_TAG}" ]]; then
             dispatch_flags+=(-f previous-version="${PREVIOUS_TAG}")
+          fi
+
+          if [[ -n "${ARTIFACT_COMPARE_TAG}" ]]; then
+            dispatch_flags+=(-f artifact-compare-version="${ARTIFACT_COMPARE_TAG}")
           fi
 
           gh workflow run prepare-release.yml "${dispatch_flags[@]}"

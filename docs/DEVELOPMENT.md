@@ -40,7 +40,7 @@ node --run check
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.
 - CI verifies that source changes still build into a release artifact and that the workflows stay valid.
 - The `release` workflow determines the next stable `vX.Y.Z` from conventional commits since the highest existing release tag, then dispatches `prepare-release`.
-- The `prepare-release` workflow creates a release-only commit containing `dist/index.js`, tags it with the requested release version, moves the plain compatibility tags `vX.Y` and `vX` for stable releases, and publishes a GitHub Release with generated notes.
+- The `prepare-release` workflow builds `dist/index.js`, refuses releases whose generated action artifact matches the relevant previous release tag, creates a release-only commit containing `dist/index.js`, tags it with the requested release version, moves the plain compatibility tags `vX.Y` and `vX` for stable releases, and publishes a GitHub Release with generated notes.
 - Consumers should pin a specific release tag or a maintained major tag such as `v1`, not `main`.
 
 ## Publishing a change
@@ -64,7 +64,7 @@ After changing `src/`:
 3. Run the `release` workflow from `main`.
    - Leave `prerelease=false` for a stable `vX.Y.Z` release.
    - Set `prerelease=true` to publish `vX.Y.Z-rc.N` on the single supported `rc` channel.
-4. Let the workflows determine the next version, build `dist/index.js`, create the release-only commit, push the release tag, move the matching `vX.Y` and `vX` tags for stable releases only, and publish the GitHub release with generated notes.
+4. Let the workflows determine the next version, build `dist/index.js`, verify that the action artifact changed, create the release-only commit, push the release tag, move the matching `vX.Y` and `vX` tags for stable releases only, and publish the GitHub release with generated notes.
 
 `v1.2.3` is the stable release tag.
 `v1.2.3-rc.1` is an `rc` prerelease tag.
