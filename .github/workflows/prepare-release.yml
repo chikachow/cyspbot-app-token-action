@@ -16,6 +16,10 @@ on:
         description: Previous release tag to use as the release notes start tag
         required: false
         type: string
+      artifact-compare-version:
+        description: Existing release tag to compare against the generated action artifact
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -42,6 +46,32 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run check
+
+      - name: Validate artifact changed
+        env:
+          ARTIFACT_COMPARE_VERSION: ${{ inputs.artifact-compare-version }}
+        run: |
+          if [[ -z "${ARTIFACT_COMPARE_VERSION}" ]]; then
+            exit 0
+          fi
+
+          if [[ ! "${ARTIFACT_COMPARE_VERSION}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
+            echo "Expected artifact-compare-version like v1.2.3 or v1.2.3-rc.1, got ${ARTIFACT_COMPARE_VERSION}" >&2
+            exit 1
+          fi
+
+          git rev-parse --verify "refs/tags/${ARTIFACT_COMPARE_VERSION}" >/dev/null
+
+          if ! git cat-file -e "${ARTIFACT_COMPARE_VERSION}:dist/index.js"; then
+            echo "Skipping artifact comparison because ${ARTIFACT_COMPARE_VERSION} does not contain dist/index.js"
+            exit 0
+          fi
+
+          if cmp -s <(git show "${ARTIFACT_COMPARE_VERSION}:dist/index.js") dist/index.js \
+            && cmp -s <(git show "${ARTIFACT_COMPARE_VERSION}:action.yml") action.yml; then
+            echo "No action artifact changes detected since ${ARTIFACT_COMPARE_VERSION}" >&2
+            exit 1
+          fi
 
       - name: Validate requested version
         env:
