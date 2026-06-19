@@ -42,6 +42,8 @@ export async function runAction(
   const cyspbotUrl = new URL(
     normalizeInput(dependencies.getInput("cyspbot-url")) ?? defaultCyspbotUrl,
   );
+  const resource = normalizeInput(dependencies.getInput("resource"));
+  const scope = normalizeInput(dependencies.getInput("scope"));
   if (cyspbotUrl.protocol !== "https:") {
     throw new Error("cyspbot-url must use https");
   }
@@ -54,6 +56,12 @@ export async function runAction(
     subject_token: oidcToken,
     subject_token_type: oidcIdTokenType,
   });
+  if (resource !== null) {
+    body.set("resource", resource);
+  }
+  if (scope !== null) {
+    body.set("scope", scope);
+  }
   const response = await dependencies.fetch(new URL("/token", cyspbotUrl), {
     body,
     headers: {

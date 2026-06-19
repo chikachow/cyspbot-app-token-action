@@ -108,8 +108,13 @@ void describe("runAction", () => {
   });
 
   void it("uses default values when inputs are blank", async () => {
+    let requestHasResource = true;
+    let requestHasScope = true;
     const { dependencies, getIDTokenMock } = createDependencies({
-      fetch: mock.fn(async () => {
+      fetch: mock.fn(async (_input, init) => {
+        const requestBody = new URLSearchParams(init?.body as string);
+        requestHasResource = requestBody.has("resource");
+        requestHasScope = requestBody.has("scope");
         return Response.json({
           access_token: "ghs_token",
           expires_in: 3600,
@@ -123,6 +128,48 @@ void describe("runAction", () => {
     await runAction(dependencies);
 
     assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.equal(requestHasResource, false);
+    assert.equal(requestHasScope, false);
+  });
+
+  void it("passes explicit resource and scope token request options to cyspbot", async () => {
+    const fetchImplementation: ActionDependencies["fetch"] = async (_input, init) => {
+      const body = new URLSearchParams(init?.body as string);
+      assert.equal(body.get("resource"), "https://api.github.com/repos/cysp/example");
+      assert.equal(body.get("scope"), "contents:write pull_requests:write");
+
+      return Response.json({
+        access_token: "ghs_token",
+        expires_in: 3600,
+        issued_token_type: "urn:chikachow:github-app-installation-access-token",
+        token_type: "Bearer",
+      });
+    };
+
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(fetchImplementation),
+      getInput: mock.fn((name: string) => {
+        if (name === "audience") {
+          return "cyspbot";
+        }
+
+        if (name === "cyspbot-url") {
+          return "https://cyspbot.chikachow.org";
+        }
+
+        if (name === "resource") {
+          return "  https://api.github.com/repos/cysp/example  ";
+        }
+
+        if (name === "scope") {
+          return "  contents:write pull_requests:write  ";
+        }
+
+        return "";
+      }),
+    });
+
+    await runAction(dependencies);
   });
 
   void it("surfaces OAuth errors from cyspbot", async () => {
