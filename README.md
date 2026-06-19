@@ -30,6 +30,12 @@ Inputs:
   - default: `cyspbot`
 - `cyspbot-url`
   - default: `https://cyspbot.chikachow.org`
+- `resource`
+  - optional canonical GitHub repository API URI, such as `https://api.github.com/repos/owner/repo`
+- `scope`
+  - optional space-delimited GitHub App permission scopes, such as `contents:write pull_requests:write`
+
+When `resource` or `scope` are omitted, cyspbot applies its service defaults for the verified workflow principal. Blank values are treated as omitted by the action. Non-blank values are sent to cyspbot, which validates the canonical repository resource, supported permission scopes, and service-owned token policy.
 
 Example use with `peter-evans/create-pull-request`:
 

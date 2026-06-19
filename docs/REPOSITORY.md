@@ -36,7 +36,8 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `action.yml` points at `dist/index.js`.
 - `dist/index.js` is generated during release preparation and committed onto release-tagged commits, not onto `main`.
 - The runtime artifact stays self-contained. Consumers do not install this repository's dependencies at action execution time.
-- The action exposes `token` and `expires_at` outputs and accepts `audience` and `cyspbot-url` inputs.
+- The action exposes `token` and `expires_at` outputs and accepts `audience`, `cyspbot-url`, `resource`, and `scope` inputs.
+- Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank values are trimmed and forwarded to cyspbot for canonical resource, permission scope, and service-owned policy validation.
 - `main` is the source branch, not a supported consumer ref for `uses:`.
 - `vX.Y.Z` tags are GitHub Release tags created by the release workflows.
 - `vX.Y` and `vX` tags are compatibility tags without corresponding GitHub Releases, so they move forward to the latest compatible stable release commit.

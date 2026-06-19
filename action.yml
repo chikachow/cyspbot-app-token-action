@@ -10,10 +10,16 @@ inputs:
     description: Base URL for the cyspbot service.
     required: false
     default: https://cyspbot.chikachow.org
+  resource:
+    description: Canonical GitHub repository API URI to request, such as https://api.github.com/repos/owner/repo. Omitted by default.
+    required: false
+  scope:
+    description: Space-delimited GitHub App permission scopes to request, such as contents:write pull_requests:write. Omitted by default.
+    required: false
 
 outputs:
   token:
-    description: Short-lived GitHub App installation token for the calling repository.
+    description: Short-lived GitHub App installation token.
   expires_at:
     description: Expiration timestamp for the minted installation token.
 
