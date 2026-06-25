@@ -23,7 +23,7 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `.github/workflows/ci.yml`
   - CI for formatting, linting, typechecking, tests, bundle verification, and `actionlint`
 - `.github/workflows/prepare-release.yml`
-  - dispatched release-preparation workflow that builds the bundled runtime, creates the requested release tag, updates compatibility tags, and publishes generated release notes
+  - dispatched release-preparation workflow that builds the bundled runtime, verifies the generated action artifact changed, creates the requested release tag, updates compatibility tags, and publishes generated release notes
 - `.github/workflows/release.yml`
   - manual release entrypoint that calculates the next semantic version from conventional commits since the highest existing release tag and dispatches `prepare-release`
 - `tsdown.config.mjs`
@@ -59,7 +59,8 @@ The logic is small, but a JavaScript action is the right fit here because it giv
 4. Keep the action self-contained. Do not introduce runtime dependence on consumer-side `node_modules`.
 5. Preserve strict response validation: cyspbot `/token` responses must be JSON objects with string `access_token`, integer `expires_in`, the expected GitHub installation token type, and `token_type: Bearer`.
 6. Treat release preparation as the point where `dist/index.js` becomes part of the public contract.
-7. Do not create GitHub Releases for the movable `vX.Y` or `vX` compatibility tags.
+7. Do not publish a new action release unless the generated action artifact changes.
+8. Do not create GitHub Releases for the movable `vX.Y` or `vX` compatibility tags.
 
 ## Consumer example
 
