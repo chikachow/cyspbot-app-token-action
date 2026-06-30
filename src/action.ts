@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import { z } from "zod";
 
-const defaultAudience = "cyspbot";
+const defaultAudience = "https://github.com/apps/cyspbot";
 const defaultCyspbotUrl = "https://cyspbot.chikachow.org";
 const defaultCyspbotTimeoutMs = 10_000;
 const githubInstallationAccessTokenType = "urn:chikachow:github-app-installation-access-token";
@@ -48,9 +48,11 @@ export async function runAction(
     throw new Error("cyspbot-url must use https");
   }
 
-  const oidcToken = await dependencies.getIDToken(audience);
+  const tokenExchangeAudience = validateAudience(audience);
+  const oidcToken = await dependencies.getIDToken(tokenExchangeAudience);
 
   const body = new URLSearchParams({
+    audience: tokenExchangeAudience,
     grant_type: tokenExchangeGrantType,
     requested_token_type: githubInstallationAccessTokenType,
     subject_token: oidcToken,
@@ -161,6 +163,41 @@ function toSecondPrecisionIso(date: Date): string {
 function normalizeInput(value: string): string | null {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function validateAudience(value: string): string {
+  let audience: URL;
+
+  try {
+    audience = new URL(value);
+  } catch {
+    throw new Error("audience must be a canonical GitHub App URL");
+  }
+
+  if (
+    audience.href !== value ||
+    audience.protocol !== "https:" ||
+    audience.hostname !== "github.com" ||
+    audience.port.length !== 0 ||
+    audience.username.length !== 0 ||
+    audience.password.length !== 0 ||
+    audience.search.length !== 0 ||
+    audience.hash.length !== 0
+  ) {
+    throw new Error("audience must be a canonical GitHub App URL");
+  }
+
+  const parts = audience.pathname.split("/");
+  const slug = parts[2];
+  if (parts.length !== 3 || parts[0] !== "" || parts[1] !== "apps" || !isGitHubAppSlug(slug)) {
+    throw new Error("audience must be a canonical GitHub App URL");
+  }
+
+  return value;
+}
+
+function isGitHubAppSlug(value: string | undefined): value is string {
+  return value !== undefined && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u.test(value);
 }
 
 const defaultDependencies: ActionDependencies = {

@@ -27,15 +27,17 @@ Outputs:
 Inputs:
 
 - `audience`
-  - default: `cyspbot`
+  - canonical GitHub App URL, such as `https://github.com/apps/cyspbot`
+  - default: `https://github.com/apps/cyspbot`
 - `cyspbot-url`
+  - HTTPS base URL for the cyspbot service
   - default: `https://cyspbot.chikachow.org`
 - `resource`
   - optional canonical GitHub repository API URI, such as `https://api.github.com/repos/owner/repo`
 - `scope`
   - optional space-delimited GitHub App permission scopes, such as `contents:write pull_requests:write`
 
-When `resource` or `scope` are omitted, cyspbot applies its service defaults for the verified workflow principal. Blank values are treated as omitted by the action. Non-blank values are sent to cyspbot, which validates the canonical repository resource, supported permission scopes, and service-owned token policy.
+The action requires an HTTPS `cyspbot-url`. It requests a GitHub Actions OIDC token whose audience is the `audience` input and sends the same value as the token-exchange `audience`. When `resource` or `scope` are omitted, cyspbot applies its service defaults for the verified workflow principal. Blank values are treated as omitted by the action. Non-blank `audience` values are validated locally for canonical GitHub App URL shape before requesting an OIDC token. Non-blank `resource` and `scope` values are forwarded to cyspbot for service-owned token request and policy validation.
 
 Example use with `peter-evans/create-pull-request`:
 
@@ -48,6 +50,8 @@ permissions:
 steps:
   - uses: chikachow/cyspbot-app-token-action@v0.0.3
     id: cyspbot
+    with:
+      scope: contents:write pull_requests:write
 
   - uses: peter-evans/create-pull-request@v8
     with:

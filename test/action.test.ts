@@ -26,10 +26,6 @@ function createDependencies(overrides?: Partial<ActionDependencies>): MockedDepe
   const fetchMock = mock.fn<ActionDependencies["fetch"]>();
   const getIDTokenMock = mock.fn<ActionDependencies["getIDToken"]>(async () => "oidc-token");
   const getInputMock = mock.fn<ActionDependencies["getInput"]>((name: string) => {
-    if (name === "audience") {
-      return "cyspbot";
-    }
-
     if (name === "cyspbot-url") {
       return "https://cyspbot.chikachow.org";
     }
@@ -77,6 +73,7 @@ void describe("runAction", () => {
 
       const body = new URLSearchParams(init?.body as string);
       assert.deepEqual(Object.fromEntries(body), {
+        audience: "https://github.com/apps/cyspbot",
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         requested_token_type: "urn:chikachow:github-app-installation-access-token",
         subject_token: "oidc-token",
@@ -97,7 +94,7 @@ void describe("runAction", () => {
     await runAction(dependencies);
 
     assert.equal(createTimeoutSignalMock.mock.calls.length, 1);
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://github.com/apps/cyspbot"]);
     assert.deepEqual(setSecretMock.mock.calls[0]?.arguments, ["ghs_token"]);
     assert.equal(setOutputMock.mock.calls.length, 2);
     assert.deepEqual(setOutputMock.mock.calls[0]?.arguments, ["token", "ghs_token"]);
@@ -108,11 +105,13 @@ void describe("runAction", () => {
   });
 
   void it("uses default values when inputs are blank", async () => {
+    let requestAudience = "";
     let requestHasResource = true;
     let requestHasScope = true;
     const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(async (_input, init) => {
         const requestBody = new URLSearchParams(init?.body as string);
+        requestAudience = requestBody.get("audience") ?? "";
         requestHasResource = requestBody.has("resource");
         requestHasScope = requestBody.has("scope");
         return Response.json({
@@ -127,14 +126,16 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://github.com/apps/cyspbot"]);
+    assert.equal(requestAudience, "https://github.com/apps/cyspbot");
     assert.equal(requestHasResource, false);
     assert.equal(requestHasScope, false);
   });
 
-  void it("passes explicit resource and scope token request options to cyspbot", async () => {
+  void it("passes explicit audience, resource, and scope token request options to cyspbot", async () => {
     const fetchImplementation: ActionDependencies["fetch"] = async (_input, init) => {
       const body = new URLSearchParams(init?.body as string);
+      assert.equal(body.get("audience"), "https://github.com/apps/deploy-bot");
       assert.equal(body.get("resource"), "https://api.github.com/repos/cysp/example");
       assert.equal(body.get("scope"), "contents:write pull_requests:write");
 
@@ -146,15 +147,15 @@ void describe("runAction", () => {
       });
     };
 
-    const { dependencies } = createDependencies({
+    const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(fetchImplementation),
       getInput: mock.fn((name: string) => {
-        if (name === "audience") {
-          return "cyspbot";
-        }
-
         if (name === "cyspbot-url") {
           return "https://cyspbot.chikachow.org";
+        }
+
+        if (name === "audience") {
+          return "  https://github.com/apps/deploy-bot  ";
         }
 
         if (name === "resource") {
@@ -170,6 +171,90 @@ void describe("runAction", () => {
     });
 
     await runAction(dependencies);
+
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, [
+      "https://github.com/apps/deploy-bot",
+    ]);
+  });
+
+  void it("passes arbitrary non-blank scopes to cyspbot", async () => {
+    const { dependencies } = createDependencies({
+      fetch: mock.fn(async (_input, init) => {
+        const body = new URLSearchParams(init?.body as string);
+        assert.equal(body.get("scope"), "issues:write metadata:read");
+        return Response.json({
+          access_token: "ghs_token",
+          expires_in: 3600,
+          issued_token_type: "urn:chikachow:github-app-installation-access-token",
+          token_type: "Bearer",
+        });
+      }),
+      getInput: mock.fn((name: string) => {
+        if (name === "cyspbot-url") {
+          return "https://cyspbot.chikachow.org";
+        }
+
+        if (name === "scope") {
+          return "  issues:write metadata:read  ";
+        }
+
+        return "";
+      }),
+    });
+
+    await runAction(dependencies);
+  });
+
+  void it("rejects invalid audiences before requesting an OIDC token", async () => {
+    const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
+      getInput: mock.fn((name: string) => {
+        if (name === "cyspbot-url") {
+          return "https://cyspbot.chikachow.org";
+        }
+
+        if (name === "audience") {
+          return "cyspbot";
+        }
+
+        return "";
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "audience must be a canonical GitHub App URL",
+    });
+    assert.equal(getIDTokenMock.mock.calls.length, 0);
+    assert.equal(fetchMock.mock.calls.length, 0);
+  });
+
+  void it("passes non-blank resources to cyspbot without local validation", async () => {
+    const { dependencies, getIDTokenMock } = createDependencies({
+      fetch: mock.fn(async (_input, init) => {
+        const body = new URLSearchParams(init?.body as string);
+        assert.equal(body.get("resource"), "cysp/example");
+        return Response.json({
+          access_token: "ghs_token",
+          expires_in: 3600,
+          issued_token_type: "urn:chikachow:github-app-installation-access-token",
+          token_type: "Bearer",
+        });
+      }),
+      getInput: mock.fn((name: string) => {
+        if (name === "cyspbot-url") {
+          return "https://cyspbot.chikachow.org";
+        }
+
+        if (name === "resource") {
+          return "  cysp/example  ";
+        }
+
+        return "";
+      }),
+    });
+
+    await runAction(dependencies);
+
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://github.com/apps/cyspbot"]);
   });
 
   void it("surfaces OAuth errors from cyspbot", async () => {
@@ -352,10 +437,6 @@ void describe("runAction", () => {
   void it("rejects non-https cyspbot urls before requesting an OIDC token", async () => {
     const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
       getInput: mock.fn((name: string) => {
-        if (name === "audience") {
-          return "cyspbot";
-        }
-
         if (name === "cyspbot-url") {
           return "http://cyspbot.chikachow.org";
         }

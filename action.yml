@@ -3,11 +3,11 @@ description: Exchange a GitHub Actions OIDC token for a short-lived repository-s
 
 inputs:
   audience:
-    description: OIDC audience to request from GitHub Actions.
+    description: Canonical GitHub App URL to request, such as https://github.com/apps/cyspbot.
     required: false
-    default: cyspbot
+    default: https://github.com/apps/cyspbot
   cyspbot-url:
-    description: Base URL for the cyspbot service.
+    description: HTTPS base URL for the cyspbot service.
     required: false
     default: https://cyspbot.chikachow.org
   resource:
