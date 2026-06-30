@@ -37,7 +37,8 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `dist/index.js` is generated during release preparation and committed onto release-tagged commits, not onto `main`.
 - The runtime artifact stays self-contained. Consumers do not install this repository's dependencies at action execution time.
 - The action exposes `token` and `expires_at` outputs and accepts `audience`, `cyspbot-url`, `resource`, and `scope` inputs.
-- Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank values are trimmed and forwarded to cyspbot for canonical resource, permission scope, and service-owned policy validation.
+- Blank `audience` defaults to `https://github.com/apps/cyspbot`; the action uses it to request a GitHub Actions OIDC token and sends the same URL as the token-exchange `audience`. Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank `audience` values are trimmed and locally validated for canonical GitHub App URL shape before requesting an OIDC token. Non-blank `resource` and `scope` values are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
+- Blank `cyspbot-url` defaults to `https://cyspbot.chikachow.org`; non-blank values are trimmed and must use HTTPS. The action posts an `application/x-www-form-urlencoded` OAuth token-exchange request to `/token` with a 10-second timeout.
 - `main` is the source branch, not a supported consumer ref for `uses:`.
 - `vX.Y.Z` tags are GitHub Release tags created by the release workflows.
 - `vX.Y` and `vX` tags are compatibility tags without corresponding GitHub Releases, so they move forward to the latest compatible stable release commit.
@@ -72,6 +73,8 @@ permissions:
 steps:
   - uses: chikachow/cyspbot-app-token-action@v0.0.3
     id: cyspbot
+    with:
+      scope: contents:write pull_requests:write
 
   - uses: peter-evans/create-pull-request@v8
     with:
