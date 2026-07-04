@@ -36,9 +36,12 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `action.yml` points at `dist/index.js`.
 - `dist/index.js` is generated during release preparation and committed onto release-tagged commits, not onto `main`.
 - The runtime artifact stays self-contained. Consumers do not install this repository's dependencies at action execution time.
-- The action exposes `token` and `expires_at` outputs and accepts `github-app`, `cyspbot-url`, `resource`, and `scope` inputs.
-- Blank `github-app` defaults to `cyspbot`; the action sends it as cyspbot's `github_app` token endpoint extension parameter. The GitHub Actions OIDC token is always requested with cyspbot's internal service audience, `cyspbot`. Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank `github-app` values are trimmed and locally validated for GitHub App slug shape before requesting an OIDC token. Non-blank `resource` and `scope` values are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
-- Blank `cyspbot-url` defaults to `https://cyspbot.chikachow.org`; non-blank values are trimmed and must use HTTPS. The action posts an `application/x-www-form-urlencoded` OAuth token-exchange request to `/token` with a 10-second timeout.
+- The action exposes `token`, `expires_at`, and `scope` outputs and accepts `resource` and `scope` inputs.
+- The action always talks to the hosted cyspbot token endpoint at `https://cyspbot.chikachow.org/token`.
+- The action always requests a GitHub Actions OIDC token for cyspbot's fixed service audience, `cyspbot`.
+- The action does not send a token-exchange `audience` parameter; current cyspbot rejects non-empty `audience` form fields.
+- Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank values are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
+- The action posts an `application/x-www-form-urlencoded` OAuth token-exchange request with a 10-second timeout.
 - `main` is the source branch, not a supported consumer ref for `uses:`.
 - `vX.Y.Z` tags are GitHub Release tags created by the release workflows.
 - `vX.Y` and `vX` tags are compatibility tags without corresponding GitHub Releases, so they move forward to the latest compatible stable release commit.
@@ -58,7 +61,7 @@ The logic is small, but a JavaScript action is the right fit here because it giv
 2. Keep examples aligned with the inputs and outputs declared in `action.yml`.
 3. Keep `cyspbot` implementation details in the `cyspbot` repository, not here.
 4. Keep the action self-contained. Do not introduce runtime dependence on consumer-side `node_modules`.
-5. Preserve strict response validation: cyspbot `/token` responses must be JSON objects with string `access_token`, integer `expires_in`, the expected GitHub installation token type, and `token_type: Bearer`.
+5. Preserve strict response validation: cyspbot `/token` responses must be JSON objects with string `access_token`, integer `expires_in`, the expected GitHub installation token type, string `scope`, and `token_type: Bearer`.
 6. Treat release preparation as the point where `dist/index.js` becomes part of the public contract.
 7. Do not create GitHub Releases for the movable `vX.Y` or `vX` compatibility tags.
 
@@ -71,7 +74,7 @@ permissions:
   pull-requests: write
 
 steps:
-  - uses: chikachow/cyspbot-app-token-action@v0.0.3
+  - uses: chikachow/cyspbot-app-token-action@v0
     id: cyspbot
     with:
       scope: contents:write pull_requests:write

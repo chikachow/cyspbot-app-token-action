@@ -41,7 +41,7 @@ pnpm run check
 - CI verifies that source changes still build into a release artifact and that the workflows stay valid.
 - The `release` workflow determines the next stable `vX.Y.Z` from conventional commits since the highest existing release tag, then dispatches `prepare-release`.
 - The `prepare-release` workflow creates a release-only commit containing `dist/index.js`, tags it with the requested release version, moves the plain compatibility tags `vX.Y` and `vX` for stable releases, and publishes a GitHub Release with generated notes.
-- Consumers should pin a specific release tag or a maintained major tag such as `v1`, not `main`.
+- Consumers should pin a specific release tag or a maintained compatibility tag such as `v0`, not `main`.
 
 ## Publishing a change
 
