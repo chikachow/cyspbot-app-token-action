@@ -11,7 +11,6 @@ export default defineConfig({
       "@actions/io",
       "tunnel",
       "undici",
-      "zod",
     ],
   },
   entry: {

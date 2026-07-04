@@ -2,14 +2,6 @@ name: Get cyspbot app token
 description: Exchange a GitHub Actions OIDC token for a short-lived repository-scoped GitHub App installation token from cyspbot.
 
 inputs:
-  github-app:
-    description: GitHub App slug to request from cyspbot, such as cyspbot.
-    required: false
-    default: cyspbot
-  cyspbot-url:
-    description: HTTPS base URL for the cyspbot service.
-    required: false
-    default: https://cyspbot.chikachow.org
   resource:
     description: Canonical GitHub repository API URI to request, such as https://api.github.com/repos/owner/repo. Omitted by default.
     required: false
@@ -22,6 +14,8 @@ outputs:
     description: Short-lived GitHub App installation token.
   expires_at:
     description: Expiration timestamp for the minted installation token.
+  scope:
+    description: Canonical GitHub App permission scope issued by cyspbot.
 
 runs:
   using: node24
