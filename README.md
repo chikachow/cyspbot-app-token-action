@@ -26,9 +26,9 @@ Outputs:
 
 Inputs:
 
-- `audience`
-  - canonical GitHub App URL, such as `https://github.com/apps/cyspbot`
-  - default: `https://github.com/apps/cyspbot`
+- `github-app`
+  - GitHub App slug to request from cyspbot, such as `cyspbot`
+  - default: `cyspbot`
 - `cyspbot-url`
   - HTTPS base URL for the cyspbot service
   - default: `https://cyspbot.chikachow.org`
@@ -37,7 +37,7 @@ Inputs:
 - `scope`
   - optional space-delimited GitHub App permission scopes, such as `contents:write pull_requests:write`
 
-The action requires an HTTPS `cyspbot-url`. It requests a GitHub Actions OIDC token whose audience is the `audience` input and sends the same value as the token-exchange `audience`. When `resource` or `scope` are omitted, cyspbot applies its service defaults for the verified workflow principal. Blank values are treated as omitted by the action. Non-blank `audience` values are validated locally for canonical GitHub App URL shape before requesting an OIDC token. Non-blank `resource` and `scope` values are forwarded to cyspbot for service-owned token request and policy validation.
+The action requires an HTTPS `cyspbot-url`. It requests a GitHub Actions OIDC token for the internal cyspbot audience `cyspbot`, and sends the `github-app` input as cyspbot's `github_app` token endpoint extension parameter. When `resource` or `scope` are omitted, cyspbot applies its service defaults for the verified workflow principal. Blank values are treated as omitted by the action. Non-blank `github-app` values are validated locally for GitHub App slug shape before requesting an OIDC token. Non-blank `resource` and `scope` values are forwarded to cyspbot for service-owned token request and policy validation.
 
 Example use with `peter-evans/create-pull-request`:
 
