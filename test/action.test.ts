@@ -73,8 +73,8 @@ void describe("runAction", () => {
 
       const body = new URLSearchParams(init?.body as string);
       assert.deepEqual(Object.fromEntries(body), {
-        audience: "https://github.com/apps/cyspbot",
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+        github_app: "cyspbot",
         requested_token_type: "urn:chikachow:github-app-installation-access-token",
         subject_token: "oidc-token",
         subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
@@ -94,7 +94,7 @@ void describe("runAction", () => {
     await runAction(dependencies);
 
     assert.equal(createTimeoutSignalMock.mock.calls.length, 1);
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://github.com/apps/cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
     assert.deepEqual(setSecretMock.mock.calls[0]?.arguments, ["ghs_token"]);
     assert.equal(setOutputMock.mock.calls.length, 2);
     assert.deepEqual(setOutputMock.mock.calls[0]?.arguments, ["token", "ghs_token"]);
@@ -105,13 +105,13 @@ void describe("runAction", () => {
   });
 
   void it("uses default values when inputs are blank", async () => {
-    let requestAudience = "";
+    let requestGitHubApp = "";
     let requestHasResource = true;
     let requestHasScope = true;
     const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(async (_input, init) => {
         const requestBody = new URLSearchParams(init?.body as string);
-        requestAudience = requestBody.get("audience") ?? "";
+        requestGitHubApp = requestBody.get("github_app") ?? "";
         requestHasResource = requestBody.has("resource");
         requestHasScope = requestBody.has("scope");
         return Response.json({
@@ -126,16 +126,16 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://github.com/apps/cyspbot"]);
-    assert.equal(requestAudience, "https://github.com/apps/cyspbot");
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.equal(requestGitHubApp, "cyspbot");
     assert.equal(requestHasResource, false);
     assert.equal(requestHasScope, false);
   });
 
-  void it("passes explicit audience, resource, and scope token request options to cyspbot", async () => {
+  void it("passes explicit GitHub App, resource, and scope token request options to cyspbot", async () => {
     const fetchImplementation: ActionDependencies["fetch"] = async (_input, init) => {
       const body = new URLSearchParams(init?.body as string);
-      assert.equal(body.get("audience"), "https://github.com/apps/deploy-bot");
+      assert.equal(body.get("github_app"), "deploy-bot");
       assert.equal(body.get("resource"), "https://api.github.com/repos/cysp/example");
       assert.equal(body.get("scope"), "contents:write pull_requests:write");
 
@@ -154,8 +154,8 @@ void describe("runAction", () => {
           return "https://cyspbot.chikachow.org";
         }
 
-        if (name === "audience") {
-          return "  https://github.com/apps/deploy-bot  ";
+        if (name === "github-app") {
+          return "  deploy-bot  ";
         }
 
         if (name === "resource") {
@@ -172,9 +172,7 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, [
-      "https://github.com/apps/deploy-bot",
-    ]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
   });
 
   void it("passes arbitrary non-blank scopes to cyspbot", async () => {
@@ -205,15 +203,15 @@ void describe("runAction", () => {
     await runAction(dependencies);
   });
 
-  void it("rejects invalid audiences before requesting an OIDC token", async () => {
+  void it("rejects invalid GitHub Apps before requesting an OIDC token", async () => {
     const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
       getInput: mock.fn((name: string) => {
         if (name === "cyspbot-url") {
           return "https://cyspbot.chikachow.org";
         }
 
-        if (name === "audience") {
-          return "cyspbot";
+        if (name === "github-app") {
+          return "https://github.com/apps/cyspbot";
         }
 
         return "";
@@ -221,7 +219,7 @@ void describe("runAction", () => {
     });
 
     await assert.rejects(runAction(dependencies), {
-      message: "audience must be a canonical GitHub App URL",
+      message: "github-app must be a GitHub App slug",
     });
     assert.equal(getIDTokenMock.mock.calls.length, 0);
     assert.equal(fetchMock.mock.calls.length, 0);
@@ -254,7 +252,7 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://github.com/apps/cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
   });
 
   void it("surfaces OAuth errors from cyspbot", async () => {

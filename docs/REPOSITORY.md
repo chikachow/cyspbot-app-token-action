@@ -36,8 +36,8 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `action.yml` points at `dist/index.js`.
 - `dist/index.js` is generated during release preparation and committed onto release-tagged commits, not onto `main`.
 - The runtime artifact stays self-contained. Consumers do not install this repository's dependencies at action execution time.
-- The action exposes `token` and `expires_at` outputs and accepts `audience`, `cyspbot-url`, `resource`, and `scope` inputs.
-- Blank `audience` defaults to `https://github.com/apps/cyspbot`; the action uses it to request a GitHub Actions OIDC token and sends the same URL as the token-exchange `audience`. Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank `audience` values are trimmed and locally validated for canonical GitHub App URL shape before requesting an OIDC token. Non-blank `resource` and `scope` values are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
+- The action exposes `token` and `expires_at` outputs and accepts `github-app`, `cyspbot-url`, `resource`, and `scope` inputs.
+- Blank `github-app` defaults to `cyspbot`; the action sends it as cyspbot's `github_app` token endpoint extension parameter. The GitHub Actions OIDC token is always requested with cyspbot's internal service audience, `cyspbot`. Blank `resource` and `scope` inputs are omitted from the token exchange request. Non-blank `github-app` values are trimmed and locally validated for GitHub App slug shape before requesting an OIDC token. Non-blank `resource` and `scope` values are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
 - Blank `cyspbot-url` defaults to `https://cyspbot.chikachow.org`; non-blank values are trimmed and must use HTTPS. The action posts an `application/x-www-form-urlencoded` OAuth token-exchange request to `/token` with a 10-second timeout.
 - `main` is the source branch, not a supported consumer ref for `uses:`.
 - `vX.Y.Z` tags are GitHub Release tags created by the release workflows.

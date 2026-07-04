@@ -1,7 +1,8 @@
 import * as core from "@actions/core";
 import { z } from "zod";
 
-const defaultAudience = "https://github.com/apps/cyspbot";
+const defaultGitHubApp = "cyspbot";
+const cyspbotOidcAudience = "cyspbot";
 const defaultCyspbotUrl = "https://cyspbot.chikachow.org";
 const defaultCyspbotTimeoutMs = 10_000;
 const githubInstallationAccessTokenType = "urn:chikachow:github-app-installation-access-token";
@@ -38,7 +39,7 @@ export interface ActionDependencies {
 export async function runAction(
   dependencies: ActionDependencies = defaultDependencies,
 ): Promise<void> {
-  const audience = normalizeInput(dependencies.getInput("audience")) ?? defaultAudience;
+  const githubApp = normalizeInput(dependencies.getInput("github-app")) ?? defaultGitHubApp;
   const cyspbotUrl = new URL(
     normalizeInput(dependencies.getInput("cyspbot-url")) ?? defaultCyspbotUrl,
   );
@@ -48,12 +49,12 @@ export async function runAction(
     throw new Error("cyspbot-url must use https");
   }
 
-  const tokenExchangeAudience = validateAudience(audience);
-  const oidcToken = await dependencies.getIDToken(tokenExchangeAudience);
+  const tokenExchangeGitHubApp = validateGitHubAppSlug(githubApp);
+  const oidcToken = await dependencies.getIDToken(cyspbotOidcAudience);
 
   const body = new URLSearchParams({
-    audience: tokenExchangeAudience,
     grant_type: tokenExchangeGrantType,
+    github_app: tokenExchangeGitHubApp,
     requested_token_type: githubInstallationAccessTokenType,
     subject_token: oidcToken,
     subject_token_type: oidcIdTokenType,
@@ -165,34 +166,10 @@ function normalizeInput(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function validateAudience(value: string): string {
-  let audience: URL;
-
-  try {
-    audience = new URL(value);
-  } catch {
-    throw new Error("audience must be a canonical GitHub App URL");
+function validateGitHubAppSlug(value: string): string {
+  if (!isGitHubAppSlug(value)) {
+    throw new Error("github-app must be a GitHub App slug");
   }
-
-  if (
-    audience.href !== value ||
-    audience.protocol !== "https:" ||
-    audience.hostname !== "github.com" ||
-    audience.port.length !== 0 ||
-    audience.username.length !== 0 ||
-    audience.password.length !== 0 ||
-    audience.search.length !== 0 ||
-    audience.hash.length !== 0
-  ) {
-    throw new Error("audience must be a canonical GitHub App URL");
-  }
-
-  const parts = audience.pathname.split("/");
-  const slug = parts[2];
-  if (parts.length !== 3 || parts[0] !== "" || parts[1] !== "apps" || !isGitHubAppSlug(slug)) {
-    throw new Error("audience must be a canonical GitHub App URL");
-  }
-
   return value;
 }
 
