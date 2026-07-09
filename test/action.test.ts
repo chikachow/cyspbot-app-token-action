@@ -4,7 +4,10 @@ import { describe, it, mock } from "node:test";
 import { runAction, type ActionDependencies } from "../src/action.ts";
 
 interface MockedDependencies {
+  createTimeoutSignalMock: ReturnType<typeof mock.fn>;
   dependencies: ActionDependencies;
+  fetchMock: ReturnType<typeof mock.fn>;
+  getEnvMock: ReturnType<typeof mock.fn>;
   getIDTokenMock: ReturnType<typeof mock.fn>;
   getInputMock: ReturnType<typeof mock.fn>;
   nowMock: ReturnType<typeof mock.fn>;
@@ -25,16 +28,39 @@ function successfulTokenResponse(overrides: Record<string, unknown> = {}): Recor
 
 function createDependencies(overrides?: Partial<ActionDependencies>): MockedDependencies {
   const now = new Date("2030-01-01T00:00:00Z");
+  const timeoutSignal = AbortSignal.abort("timeout");
+  const createTimeoutSignalMock = mock.fn<ActionDependencies["createTimeoutSignal"]>(
+    (timeoutMs: number) => {
+      assert.equal(timeoutMs, 10_000);
+      return timeoutSignal;
+    },
+  );
   const fetchMock = mock.fn<ActionDependencies["fetch"]>();
+  const getEnvMock = mock.fn<ActionDependencies["getEnv"]>((name: string) => {
+    if (name === "GITHUB_REPOSITORY") {
+      return "fixture-owner/fixture-repository";
+    }
+
+    return undefined;
+  });
   const getIDTokenMock = mock.fn<ActionDependencies["getIDToken"]>(async () => "oidc-token");
-  const getInputMock = mock.fn<ActionDependencies["getInput"]>(() => "");
+  const getInputMock = mock.fn<ActionDependencies["getInput"]>((name: string) => {
+    if (name === "cyspbot-token-url") {
+      return "https://cyspbot.chikachow.org/token";
+    }
+
+    return "";
+  });
   const setOutputMock = mock.fn<ActionDependencies["setOutput"]>();
   const setSecretMock = mock.fn<ActionDependencies["setSecret"]>();
   const nowMock = mock.fn<ActionDependencies["now"]>(() => now);
 
   return {
+    createTimeoutSignalMock,
     dependencies: {
+      createTimeoutSignal: createTimeoutSignalMock,
       fetch: fetchMock,
+      getEnv: getEnvMock,
       getIDToken: getIDTokenMock,
       getInput: getInputMock,
       now: nowMock,
@@ -42,6 +68,8 @@ function createDependencies(overrides?: Partial<ActionDependencies>): MockedDepe
       setSecret: setSecretMock,
       ...overrides,
     },
+    fetchMock,
+    getEnvMock,
     getIDTokenMock,
     getInputMock,
     nowMock,
@@ -62,12 +90,14 @@ void describe("runAction", () => {
         new Headers(init?.headers).get("content-type"),
         "application/x-www-form-urlencoded",
       );
-      assert.equal(init?.signal instanceof AbortSignal, true);
+      assert.equal(init?.signal?.aborted, true);
 
-      const body = new URLSearchParams(init?.body as string);
-      assert.deepEqual(Object.fromEntries(body), {
+      const requestBody = new URLSearchParams(init?.body as string);
+      assert.deepEqual(Object.fromEntries(requestBody), {
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         requested_token_type: "urn:chikachow:github-app-installation-access-token",
+        resource: "https://api.github.com/repos/fixture-owner/fixture-repository",
+        scope: "contents:write pull_requests:write",
         subject_token: "oidc-token",
         subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
       });
@@ -75,12 +105,12 @@ void describe("runAction", () => {
       return Response.json(successfulTokenResponse());
     };
 
-    const { dependencies, getIDTokenMock, setOutputMock, setSecretMock } = createDependencies({
-      fetch: mock.fn(fetchImplementation),
-    });
+    const { createTimeoutSignalMock, dependencies, getIDTokenMock, setOutputMock, setSecretMock } =
+      createDependencies({ fetch: mock.fn(fetchImplementation) });
 
     await runAction(dependencies);
 
+    assert.equal(createTimeoutSignalMock.mock.calls.length, 1);
     assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
     assert.deepEqual(setSecretMock.mock.calls[0]?.arguments, ["ghs_token"]);
     assert.equal(setOutputMock.mock.calls.length, 3);
@@ -98,15 +128,15 @@ void describe("runAction", () => {
   void it("uses default values when inputs are blank", async () => {
     let requestHasAudience = true;
     let requestHasGitHubApp = true;
-    let requestHasResource = true;
-    let requestHasScope = true;
+    let requestResource = "";
+    let requestScope = "";
     const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(async (_input, init) => {
         const requestBody = new URLSearchParams(init?.body as string);
         requestHasAudience = requestBody.has("audience");
         requestHasGitHubApp = requestBody.has("github_app");
-        requestHasResource = requestBody.has("resource");
-        requestHasScope = requestBody.has("scope");
+        requestResource = requestBody.get("resource") ?? "";
+        requestScope = requestBody.get("scope") ?? "";
         return Response.json(successfulTokenResponse());
       }),
       getInput: mock.fn(() => "   "),
@@ -117,17 +147,21 @@ void describe("runAction", () => {
     assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
     assert.equal(requestHasAudience, false);
     assert.equal(requestHasGitHubApp, false);
-    assert.equal(requestHasResource, false);
-    assert.equal(requestHasScope, false);
+    assert.equal(requestResource, "https://api.github.com/repos/fixture-owner/fixture-repository");
+    assert.equal(requestScope, "contents:write pull_requests:write");
   });
 
-  void it("passes explicit resource and scope token request options to cyspbot", async () => {
-    const fetchImplementation: ActionDependencies["fetch"] = async (_input, init) => {
-      const body = new URLSearchParams(init?.body as string);
-      assert.equal(body.has("audience"), false);
-      assert.equal(body.has("github_app"), false);
-      assert.equal(body.get("resource"), "https://api.github.com/repos/cysp/example");
-      assert.equal(body.get("scope"), "contents:write pull_requests:write");
+  void it("passes explicit token URL, audience, resource, and scope options to cyspbot", async () => {
+    const fetchImplementation: ActionDependencies["fetch"] = async (input, init) => {
+      assert.equal(
+        input instanceof URL ? input.toString() : input,
+        "https://cyspbot.example.test/oauth/token",
+      );
+      const requestBody = new URLSearchParams(init?.body as string);
+      assert.equal(requestBody.has("audience"), false);
+      assert.equal(requestBody.has("github_app"), false);
+      assert.equal(requestBody.get("resource"), "https://api.github.com/repos/cysp/example");
+      assert.equal(requestBody.get("scope"), "contents:write pull_requests:write");
 
       return Response.json(successfulTokenResponse());
     };
@@ -135,6 +169,14 @@ void describe("runAction", () => {
     const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(fetchImplementation),
       getInput: mock.fn((name: string) => {
+        if (name === "cyspbot-token-url") {
+          return "https://cyspbot.example.test/oauth/token";
+        }
+
+        if (name === "audience") {
+          return "  fixture-custom-service  ";
+        }
+
         if (name === "resource") {
           return "  https://api.github.com/repos/cysp/example  ";
         }
@@ -149,14 +191,14 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["fixture-custom-service"]);
   });
 
   void it("passes arbitrary non-blank scopes to cyspbot", async () => {
     const { dependencies } = createDependencies({
       fetch: mock.fn(async (_input, init) => {
-        const body = new URLSearchParams(init?.body as string);
-        assert.equal(body.get("scope"), "issues:write metadata:read");
+        const requestBody = new URLSearchParams(init?.body as string);
+        assert.equal(requestBody.get("scope"), "issues:write metadata:read");
         return Response.json(successfulTokenResponse());
       }),
       getInput: mock.fn((name: string) => {
@@ -174,10 +216,11 @@ void describe("runAction", () => {
   void it("passes non-blank resources to cyspbot without local validation", async () => {
     const { dependencies, getIDTokenMock } = createDependencies({
       fetch: mock.fn(async (_input, init) => {
-        const body = new URLSearchParams(init?.body as string);
-        assert.equal(body.get("resource"), "cysp/example");
+        const requestBody = new URLSearchParams(init?.body as string);
+        assert.equal(requestBody.get("resource"), "cysp/example");
         return Response.json(successfulTokenResponse());
       }),
+      getEnv: mock.fn(() => undefined),
       getInput: mock.fn((name: string) => {
         if (name === "resource") {
           return "  cysp/example  ";
@@ -190,6 +233,18 @@ void describe("runAction", () => {
     await runAction(dependencies);
 
     assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+  });
+
+  void it("requires a resource input when repository context is unavailable", async () => {
+    const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
+      getEnv: mock.fn(() => undefined),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "resource input is required when GITHUB_REPOSITORY is unavailable",
+    });
+    assert.equal(getIDTokenMock.mock.calls.length, 0);
+    assert.equal(fetchMock.mock.calls.length, 0);
   });
 
   void it("surfaces OAuth errors from cyspbot", async () => {
@@ -363,5 +418,23 @@ void describe("runAction", () => {
     await assert.rejects(runAction(dependencies), {
       message: "cyspbot returned a non-object response",
     });
+  });
+
+  void it("rejects non-https cyspbot token URLs before requesting an OIDC token", async () => {
+    const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
+      getInput: mock.fn((name: string) => {
+        if (name === "cyspbot-token-url") {
+          return "http://cyspbot.chikachow.org/token";
+        }
+
+        return "";
+      }),
+    });
+
+    await assert.rejects(runAction(dependencies), {
+      message: "cyspbot-token-url must use https",
+    });
+    assert.equal(getIDTokenMock.mock.calls.length, 0);
+    assert.equal(fetchMock.mock.calls.length, 0);
   });
 });
