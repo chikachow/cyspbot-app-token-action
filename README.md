@@ -27,14 +27,22 @@ Outputs:
 
 Inputs:
 
+- `audience`
+  - GitHub Actions OIDC audience for the cyspbot service
+  - default: `cyspbot`
+- `cyspbot-token-url`
+  - HTTPS token exchange endpoint URL for the cyspbot service
+  - default: `https://cyspbot.chikachow.org/token`
 - `resource`
-  - optional canonical GitHub repository API URI, such as `https://api.github.com/repos/owner/repo`
+  - optional GitHub repository API URI override, such as `https://api.github.com/repos/owner/repo`
+  - default: `https://api.github.com/repos/${GITHUB_REPOSITORY}`
 - `scope`
-  - optional space-delimited GitHub App permission scopes, such as `contents:write pull_requests:write`
+  - space-delimited GitHub App permission scopes, such as `contents:write pull_requests:write`
+  - default: `contents:write pull_requests:write`
 
-The action talks to the hosted cyspbot service at `https://cyspbot.chikachow.org/token`. It requests a GitHub Actions OIDC token for cyspbot's fixed service audience, `cyspbot`. The action does not send a token-exchange `audience` parameter; current cyspbot rejects non-empty `audience` form fields.
+The action requires an HTTPS `cyspbot-token-url`. It requests a GitHub Actions OIDC token whose audience is the `audience` input. For the hosted cyspbot service, this audience must be `cyspbot`. The action does not send an RFC 8693 token-exchange `audience` form field; cyspbot uses `resource` as the issued-token target.
 
-When `resource` or `scope` are omitted, cyspbot applies its service defaults for the verified workflow principal. Blank values are treated as omitted by the action. Non-blank `resource` and `scope` values are forwarded to cyspbot for service-owned token request and policy validation. The `scope` output is the canonical permission scope that cyspbot actually issued, including when the request used defaults.
+Every token exchange request includes `resource` and `scope`. When `resource` is blank, the action derives `https://api.github.com/repos/${GITHUB_REPOSITORY}` from the GitHub Actions runtime. If `GITHUB_REPOSITORY` is unavailable, callers must provide `resource`. When `scope` is blank, the action sends `contents:write pull_requests:write`. Explicit non-blank `resource` and `scope` inputs are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
 
 Example use with `peter-evans/create-pull-request`:
 

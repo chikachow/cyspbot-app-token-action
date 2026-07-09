@@ -1,8 +1,9 @@
 import * as core from "@actions/core";
 
-const cyspbotOidcAudience = "cyspbot";
-const cyspbotTokenEndpoint = "https://cyspbot.chikachow.org/token";
+const defaultOidcAudience = "cyspbot";
+const defaultCyspbotTokenUrl = "https://cyspbot.chikachow.org/token";
 const defaultCyspbotTimeoutMs = 10_000;
+const defaultTokenRequestScope = "contents:write pull_requests:write";
 const githubInstallationAccessTokenType = "urn:chikachow:github-app-installation-access-token";
 const oidcIdTokenType = "urn:ietf:params:oauth:token-type:id_token";
 const tokenExchangeGrantType = "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -19,8 +20,10 @@ interface OAuthErrorResponse {
 }
 
 export interface ActionDependencies {
+  createTimeoutSignal(timeoutMs: number): AbortSignal;
   fetch: typeof fetch;
-  getIDToken(audience: string): Promise<string>;
+  getEnv(name: string): string | undefined;
+  getIDToken(oidcAudience: string): Promise<string>;
   getInput(name: string): string;
   now(): Date;
   setOutput(name: string, value: string): void;
@@ -30,31 +33,36 @@ export interface ActionDependencies {
 export async function runAction(
   dependencies: ActionDependencies = defaultDependencies,
 ): Promise<void> {
-  const resource = normalizeInput(dependencies.getInput("resource"));
-  const scope = normalizeInput(dependencies.getInput("scope"));
+  const oidcAudience = normalizeInput(dependencies.getInput("audience")) ?? defaultOidcAudience;
+  const cyspbotTokenUrl = new URL(
+    normalizeInput(dependencies.getInput("cyspbot-token-url")) ?? defaultCyspbotTokenUrl,
+  );
+  const resourceInput = normalizeInput(dependencies.getInput("resource"));
+  const scopeInput = normalizeInput(dependencies.getInput("scope"));
+  if (cyspbotTokenUrl.protocol !== "https:") {
+    throw new Error("cyspbot-token-url must use https");
+  }
 
-  const oidcToken = await dependencies.getIDToken(cyspbotOidcAudience);
+  const resource = resolveResource(resourceInput, dependencies);
+  const scope = resolveScope(scopeInput);
+  const oidcToken = await dependencies.getIDToken(oidcAudience);
 
-  const body = new URLSearchParams({
+  const requestBody = new URLSearchParams({
     grant_type: tokenExchangeGrantType,
     requested_token_type: githubInstallationAccessTokenType,
+    resource,
+    scope,
     subject_token: oidcToken,
     subject_token_type: oidcIdTokenType,
   });
-  if (resource !== null) {
-    body.set("resource", resource);
-  }
-  if (scope !== null) {
-    body.set("scope", scope);
-  }
-  const response = await dependencies.fetch(cyspbotTokenEndpoint, {
-    body,
+  const response = await dependencies.fetch(cyspbotTokenUrl, {
+    body: requestBody,
     headers: {
       accept: "application/json",
       "content-type": "application/x-www-form-urlencoded",
     },
     method: "POST",
-    signal: AbortSignal.timeout(defaultCyspbotTimeoutMs),
+    signal: dependencies.createTimeoutSignal(defaultCyspbotTimeoutMs),
   });
 
   if (!response.ok) {
@@ -179,9 +187,36 @@ function normalizeInput(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function normalizeEnvironmentValue(value: string | undefined): string | null {
+  if (value === undefined) {
+    return null;
+  }
+
+  return normalizeInput(value);
+}
+
+function resolveResource(resourceInput: string | null, dependencies: ActionDependencies): string {
+  if (resourceInput !== null) {
+    return resourceInput;
+  }
+
+  const githubRepository = normalizeEnvironmentValue(dependencies.getEnv("GITHUB_REPOSITORY"));
+  if (githubRepository === null) {
+    throw new Error("resource input is required when GITHUB_REPOSITORY is unavailable");
+  }
+
+  return `https://api.github.com/repos/${githubRepository}`;
+}
+
+function resolveScope(scopeInput: string | null): string {
+  return scopeInput ?? defaultTokenRequestScope;
+}
+
 const defaultDependencies: ActionDependencies = {
+  createTimeoutSignal: (timeoutMs: number) => AbortSignal.timeout(timeoutMs),
   fetch,
-  getIDToken: (audience: string) => core.getIDToken(audience),
+  getEnv: (name: string) => process.env[name],
+  getIDToken: (oidcAudience: string) => core.getIDToken(oidcAudience),
   getInput: (name: string) => core.getInput(name),
   now: () => new Date(),
   setOutput: (name: string, value: string) => core.setOutput(name, value),
