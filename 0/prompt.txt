@@ -1,0 +1,7 @@
+The supported permission scopes look to be too limited, this should support any permissions that can be requested from the github token request api
+I’m comfortable with removing that validation if it cannot be feasibly achieved (which seems to be the case)
+
+Comprehensively rewrite history in this or branch to be a series of commits from mainline to the current state
+Split the package script cleanup to a. Separate commit before this broader implementation change
+
+Do not include “codex” in commit or pr title
