@@ -1,0 +1,3 @@
+Rebase this branch to current origin/main
+Install dependencies and run tests and linting and typechecking
+Elevate privileges beyond the sandbox as necessary
