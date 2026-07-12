@@ -1,0 +1,15 @@
+<user_action>
+  <context>User initiated a review task. Here's the full review output from reviewer model. User may select one or more comments to resolve.</context>
+  <action>review</action>
+  <results>
+  The patch changes the requested OIDC audience to a value the current cyspbot verifier does not accept, breaking default token exchanges. It also exposes read permissions that the service rejects as unsupported scopes.
+
+Full review comments:
+
+- [P1] Keep the OIDC audience compatible with cyspbot — /Users/cysp/src/cyspbot-app-token-action/src/action.ts:57-59
+  With the default `cyspbot-url`, every run now requests an ID token with audience `https://github.com/apps/cyspbot`, but cyspbot's current GitHub Actions OIDC verifier is configured to accept `aud` = `cyspbot`; those tokens fail verification before the token policy is evaluated. Unless the service is deployed with matching trusted audiences, the action will return an auth error for all default users.
+
+- [P2] Reject unsupported read permission scopes — /Users/cysp/src/cyspbot-app-token-action/src/action.ts:207-211
+  When a caller sets any `permission-*` input to `read`, this validation accepts it and sends scopes such as `contents:read`, but cyspbot currently only normalizes `actions:write`, `contents:write`, and `pull_requests:write`; the documented read mode therefore always fails with `invalid_scope`. Either keep the action limited to supported write scopes or update the service contract before advertising/forwarding read permissions.
+  </results>
+  </user_action>
