@@ -1,0 +1,1 @@
+Agree with intentionally breaking compatibility where necessary. Compare this api and semantics to the implementation on current origin/main, carefully consider any differences
