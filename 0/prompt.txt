@@ -1,0 +1,3 @@
+Thoroughly explore this github action implementation and particularly its exposed api surface area
+Thoughtfully consider the exposed api
+Consider an alternative that hews closer to the underlying oauth token exchange terminology and concepts
