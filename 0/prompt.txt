@@ -1,0 +1,1 @@
+Verify that this action will work correctly with the current mainline branch of cyspbot
