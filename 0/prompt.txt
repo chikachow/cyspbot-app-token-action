@@ -1,0 +1,5 @@
+Thoroughly explore the codebase on this branch
+Produce a summary of the api surface area and business logic and semantics
+Ensure documentation accurately reflects this implementation 
+Be thorough, concise and accurate 
+Document only the current implemented state, without opinions on previous implementations or potential future changes
