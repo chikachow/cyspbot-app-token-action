@@ -151,7 +151,7 @@ void describe("runAction", () => {
     assert.equal(requestScope, "contents:write pull_requests:write");
   });
 
-  void it("passes explicit token URL, audience, resource, and scope options to cyspbot", async () => {
+  void it("passes explicit token URL, resource, and scope options to cyspbot", async () => {
     const fetchImplementation: ActionDependencies["fetch"] = async (input, init) => {
       assert.equal(
         input instanceof URL ? input.toString() : input,
@@ -173,10 +173,6 @@ void describe("runAction", () => {
           return "https://cyspbot.example.test/oauth/token";
         }
 
-        if (name === "audience") {
-          return "  fixture-custom-service  ";
-        }
-
         if (name === "resource") {
           return "  https://api.github.com/repos/cysp/example  ";
         }
@@ -191,7 +187,7 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["fixture-custom-service"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
   });
 
   void it("passes arbitrary non-blank scopes to cyspbot", async () => {

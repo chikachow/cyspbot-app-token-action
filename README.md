@@ -27,9 +27,6 @@ Outputs:
 
 Inputs:
 
-- `audience`
-  - GitHub Actions OIDC audience for the cyspbot service
-  - default: `cyspbot`
 - `cyspbot-token-url`
   - HTTPS token exchange endpoint URL for the cyspbot service
   - default: `https://cyspbot.chikachow.org/token`
@@ -40,7 +37,7 @@ Inputs:
   - space-delimited GitHub App permission scopes, such as `contents:write pull_requests:write`
   - default: `contents:write pull_requests:write`
 
-The action requires an HTTPS `cyspbot-token-url`. It requests a GitHub Actions OIDC token whose audience is the `audience` input. For the hosted cyspbot service, this audience must be `cyspbot`. The action does not send an RFC 8693 token-exchange `audience` form field; cyspbot uses `resource` as the issued-token target.
+The action requires an HTTPS `cyspbot-token-url`. It requests a GitHub Actions OIDC token for cyspbot's fixed service audience, `cyspbot`. The action does not send an RFC 8693 token-exchange `audience` form field; cyspbot uses `resource` as the issued-token target.
 
 Every token exchange request includes `resource` and `scope`. When `resource` is blank, the action derives `https://api.github.com/repos/${GITHUB_REPOSITORY}` from the GitHub Actions runtime. If `GITHUB_REPOSITORY` is unavailable, callers must provide `resource`. When `scope` is blank, the action sends `contents:write pull_requests:write`. Explicit non-blank `resource` and `scope` inputs are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
 

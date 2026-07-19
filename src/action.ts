@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 
-const defaultOidcAudience = "cyspbot";
+const cyspbotOidcAudience = "cyspbot";
 const defaultCyspbotTokenUrl = "https://cyspbot.chikachow.org/token";
 const defaultCyspbotTimeoutMs = 10_000;
 const defaultTokenRequestScope = "contents:write pull_requests:write";
@@ -33,7 +33,6 @@ export interface ActionDependencies {
 export async function runAction(
   dependencies: ActionDependencies = defaultDependencies,
 ): Promise<void> {
-  const oidcAudience = normalizeInput(dependencies.getInput("audience")) ?? defaultOidcAudience;
   const cyspbotTokenUrl = new URL(
     normalizeInput(dependencies.getInput("cyspbot-token-url")) ?? defaultCyspbotTokenUrl,
   );
@@ -45,7 +44,7 @@ export async function runAction(
 
   const resource = resolveResource(resourceInput, dependencies);
   const scope = resolveScope(scopeInput);
-  const oidcToken = await dependencies.getIDToken(oidcAudience);
+  const oidcToken = await dependencies.getIDToken(cyspbotOidcAudience);
 
   const requestBody = new URLSearchParams({
     grant_type: tokenExchangeGrantType,

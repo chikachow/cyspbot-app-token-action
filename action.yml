@@ -2,10 +2,6 @@ name: Get cyspbot app token
 description: Exchange a GitHub Actions OIDC token for a short-lived repository-scoped GitHub App installation token from cyspbot.
 
 inputs:
-  audience:
-    description: GitHub Actions OIDC audience for the cyspbot service.
-    required: false
-    default: cyspbot
   cyspbot-token-url:
     description: HTTPS token exchange endpoint URL for the cyspbot service.
     required: false

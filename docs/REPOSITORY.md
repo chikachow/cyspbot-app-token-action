@@ -36,8 +36,8 @@ For local development, release steps, and tooling conventions, see [`DEVELOPMENT
 - `action.yml` points at `dist/index.js`.
 - `dist/index.js` is generated during release preparation and committed onto release-tagged commits, not onto `main`.
 - The runtime artifact stays self-contained. Consumers do not install this repository's dependencies at action execution time.
-- The action exposes `token`, `expires_at`, and `scope` outputs and accepts `audience`, `cyspbot-token-url`, `resource`, and `scope` inputs.
-- Blank `audience` defaults to `cyspbot`; the action uses it only to request a GitHub Actions OIDC token. The action does not send an RFC 8693 token-exchange `audience` form field because cyspbot uses `resource` as the issued-token target.
+- The action exposes `token`, `expires_at`, and `scope` outputs and accepts `cyspbot-token-url`, `resource`, and `scope` inputs.
+- The action requests a GitHub Actions OIDC token for cyspbot's fixed `cyspbot` audience. It does not send an RFC 8693 token-exchange `audience` form field because cyspbot uses `resource` as the issued-token target.
 - Every token exchange request includes `resource` and `scope`. Blank `resource` inputs are inferred from `GITHUB_REPOSITORY` as `https://api.github.com/repos/{owner}/{repo}`; callers must provide `resource` if `GITHUB_REPOSITORY` is unavailable. Blank `scope` inputs default to `contents:write pull_requests:write`. Non-blank `resource` and `scope` inputs are trimmed and forwarded to cyspbot for service-owned token request and policy validation.
 - Blank `cyspbot-token-url` defaults to `https://cyspbot.chikachow.org/token`; non-blank values are trimmed and must use HTTPS. The action posts an `application/x-www-form-urlencoded` OAuth token-exchange request to the configured endpoint with a 10-second timeout.
 - `main` is the source branch, not a supported consumer ref for `uses:`.
