@@ -27,7 +27,7 @@
     "oxlint": "1.74.0",
     "oxlint-tsgolint": "7.0.2001",
     "tsdown": "0.22.13",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   },
   "devEngines": {
     "packageManager": {
