@@ -44,13 +44,7 @@ function createDependencies(overrides?: Partial<ActionDependencies>): MockedDepe
     return undefined;
   });
   const getIDTokenMock = mock.fn<ActionDependencies["getIDToken"]>(async () => "oidc-token");
-  const getInputMock = mock.fn<ActionDependencies["getInput"]>((name: string) => {
-    if (name === "cyspbot-token-url") {
-      return "https://cyspbot.chikachow.org/token";
-    }
-
-    return "";
-  });
+  const getInputMock = mock.fn<ActionDependencies["getInput"]>(() => "");
   const setOutputMock = mock.fn<ActionDependencies["setOutput"]>();
   const setSecretMock = mock.fn<ActionDependencies["setSecret"]>();
   const nowMock = mock.fn<ActionDependencies["now"]>(() => now);
@@ -111,7 +105,7 @@ void describe("runAction", () => {
     await runAction(dependencies);
 
     assert.equal(createTimeoutSignalMock.mock.calls.length, 1);
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://cyspbot.chikachow.org"]);
     assert.deepEqual(setSecretMock.mock.calls[0]?.arguments, ["ghs_token"]);
     assert.equal(setOutputMock.mock.calls.length, 3);
     assert.deepEqual(setOutputMock.mock.calls[0]?.arguments, ["token", "ghs_token"]);
@@ -131,7 +125,11 @@ void describe("runAction", () => {
     let requestResource = "";
     let requestScope = "";
     const { dependencies, getIDTokenMock } = createDependencies({
-      fetch: mock.fn(async (_input, init) => {
+      fetch: mock.fn(async (input, init) => {
+        assert.equal(
+          input instanceof URL ? input.toString() : input,
+          "https://cyspbot.chikachow.org/token",
+        );
         const requestBody = new URLSearchParams(init?.body as string);
         requestHasAudience = requestBody.has("audience");
         requestHasGitHubApp = requestBody.has("github_app");
@@ -144,7 +142,7 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://cyspbot.chikachow.org"]);
     assert.equal(requestHasAudience, false);
     assert.equal(requestHasGitHubApp, false);
     assert.equal(requestResource, "https://api.github.com/repos/fixture-owner/fixture-repository");
@@ -187,7 +185,7 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://cyspbot.chikachow.org"]);
   });
 
   void it("passes arbitrary non-blank scopes to cyspbot", async () => {
@@ -228,7 +226,7 @@ void describe("runAction", () => {
 
     await runAction(dependencies);
 
-    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["cyspbot"]);
+    assert.deepEqual(getIDTokenMock.mock.calls[0]?.arguments, ["https://cyspbot.chikachow.org"]);
   });
 
   void it("requires a resource input when repository context is unavailable", async () => {

@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 
-const cyspbotOidcAudience = "cyspbot";
-const defaultCyspbotTokenUrl = "https://cyspbot.chikachow.org/token";
+const cyspbotOidcAudience = "https://cyspbot.chikachow.org";
+const defaultCyspbotTokenUrl = `${cyspbotOidcAudience}/token`;
 const defaultCyspbotTimeoutMs = 10_000;
 const defaultTokenRequestScope = "contents:write pull_requests:write";
 const githubInstallationAccessTokenType = "urn:chikachow:github-app-installation-access-token";
