@@ -33,14 +33,11 @@ export interface ActionDependencies {
 export async function runAction(
   dependencies: ActionDependencies = defaultDependencies,
 ): Promise<void> {
-  const cyspbotTokenUrl = new URL(
-    normalizeInput(dependencies.getInput("cyspbot-token-url")) ?? defaultCyspbotTokenUrl,
+  const cyspbotTokenUrl = resolveCyspbotTokenUrl(
+    normalizeInput(dependencies.getInput("cyspbot-token-url")),
   );
   const resourceInput = normalizeInput(dependencies.getInput("resource"));
   const scopeInput = normalizeInput(dependencies.getInput("scope"));
-  if (cyspbotTokenUrl.protocol !== "https:") {
-    throw new Error("cyspbot-token-url must use https");
-  }
 
   const resource = resolveResource(resourceInput, dependencies);
   const scope = resolveScope(scopeInput);
@@ -61,6 +58,7 @@ export async function runAction(
       "content-type": "application/x-www-form-urlencoded",
     },
     method: "POST",
+    redirect: "error",
     signal: dependencies.createTimeoutSignal(defaultCyspbotTimeoutMs),
   });
 
@@ -68,7 +66,7 @@ export async function runAction(
     throw new Error(await cyspbotRequestFailureMessage(response));
   }
 
-  const tokenResponse = parseTokenResponse(await response.json(), dependencies.now());
+  const tokenResponse = parseTokenResponse(await response.json(), dependencies.now(), scope);
   dependencies.setSecret(tokenResponse.token);
   dependencies.setOutput("token", tokenResponse.token);
   dependencies.setOutput("expires_at", tokenResponse.expiresAt);
@@ -135,7 +133,7 @@ function isJsonContentType(contentType: string | null): boolean {
   );
 }
 
-function parseTokenResponse(value: unknown, now: Date): TokenResponse {
+function parseTokenResponse(value: unknown, now: Date, requestedScope: string): TokenResponse {
   if (!isJsonObject(value)) {
     throw new Error("cyspbot returned a non-object response");
   }
@@ -158,8 +156,8 @@ function parseTokenResponse(value: unknown, now: Date): TokenResponse {
     throw new Error("cyspbot response issued_token_type is missing or invalid");
   }
 
-  if (typeof scope !== "string" || scope.length === 0) {
-    throw new Error("cyspbot response scope is missing or invalid");
+  if (scope !== requestedScope) {
+    throw new Error("cyspbot response scope does not match requested scope");
   }
 
   if (tokenType !== "Bearer") {
@@ -192,6 +190,34 @@ function normalizeEnvironmentValue(value: string | undefined): string | null {
   }
 
   return normalizeInput(value);
+}
+
+function resolveCyspbotTokenUrl(input: string | null): URL {
+  const value = input ?? defaultCyspbotTokenUrl;
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw invalidCyspbotTokenUrl();
+  }
+
+  if (
+    url.href !== value ||
+    url.protocol !== "https:" ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw invalidCyspbotTokenUrl();
+  }
+
+  return url;
+}
+
+function invalidCyspbotTokenUrl(): Error {
+  return new Error("cyspbot-token-url must be an exact credential-free HTTPS URL");
 }
 
 function resolveResource(resourceInput: string | null, dependencies: ActionDependencies): string {

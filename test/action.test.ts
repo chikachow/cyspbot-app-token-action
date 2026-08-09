@@ -80,6 +80,7 @@ void describe("runAction", () => {
         "https://cyspbot.chikachow.org/token",
       );
       assert.equal(init?.method, "POST");
+      assert.equal(init?.redirect, "error");
       assert.equal(
         new Headers(init?.headers).get("content-type"),
         "application/x-www-form-urlencoded",
@@ -193,7 +194,7 @@ void describe("runAction", () => {
       fetch: mock.fn(async (_input, init) => {
         const requestBody = new URLSearchParams(init?.body as string);
         assert.equal(requestBody.get("scope"), "issues:write metadata:read");
-        return Response.json(successfulTokenResponse());
+        return Response.json(successfulTokenResponse({ scope: "issues:write metadata:read" }));
       }),
       getInput: mock.fn((name: string) => {
         if (name === "scope") {
@@ -378,7 +379,7 @@ void describe("runAction", () => {
     });
   });
 
-  void it("rejects token responses without a valid scope", async () => {
+  void it("rejects token responses whose scope differs from the request", async () => {
     const { dependencies } = createDependencies({
       fetch: mock.fn(async () => {
         return Response.json(successfulTokenResponse({ scope: undefined }));
@@ -386,7 +387,7 @@ void describe("runAction", () => {
     });
 
     await assert.rejects(runAction(dependencies), {
-      message: "cyspbot response scope is missing or invalid",
+      message: "cyspbot response scope does not match requested scope",
     });
   });
 
@@ -414,21 +415,31 @@ void describe("runAction", () => {
     });
   });
 
-  void it("rejects non-https cyspbot token URLs before requesting an OIDC token", async () => {
-    const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
-      getInput: mock.fn((name: string) => {
-        if (name === "cyspbot-token-url") {
-          return "http://cyspbot.chikachow.org/token";
-        }
+  for (const cyspbotTokenUrl of [
+    "not a URL",
+    "http://cyspbot.chikachow.org/token",
+    "https://user@cyspbot.chikachow.org/token",
+    "https://cyspbot.chikachow.org/token?resource=other",
+    "https://cyspbot.chikachow.org/token#other",
+    "https://CYSPBOT.chikachow.org/token",
+    "https://cyspbot.chikachow.org:443/token",
+  ]) {
+    void it(`rejects unsafe cyspbot token URL ${cyspbotTokenUrl}`, async () => {
+      const { dependencies, fetchMock, getIDTokenMock } = createDependencies({
+        getInput: mock.fn((name: string) => {
+          if (name === "cyspbot-token-url") {
+            return cyspbotTokenUrl;
+          }
 
-        return "";
-      }),
-    });
+          return "";
+        }),
+      });
 
-    await assert.rejects(runAction(dependencies), {
-      message: "cyspbot-token-url must use https",
+      await assert.rejects(runAction(dependencies), {
+        message: "cyspbot-token-url must be an exact credential-free HTTPS URL",
+      });
+      assert.equal(getIDTokenMock.mock.calls.length, 0);
+      assert.equal(fetchMock.mock.calls.length, 0);
     });
-    assert.equal(getIDTokenMock.mock.calls.length, 0);
-    assert.equal(fetchMock.mock.calls.length, 0);
-  });
+  }
 });
