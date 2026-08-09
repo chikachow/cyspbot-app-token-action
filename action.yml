@@ -3,9 +3,8 @@ description: Exchange a GitHub Actions OIDC token for a short-lived repository-s
 
 inputs:
   cyspbot-token-url:
-    description: HTTPS token exchange endpoint URL for the cyspbot service.
+    description: HTTPS token exchange endpoint URL. Defaults to the cyspbot OIDC audience plus /token.
     required: false
-    default: https://cyspbot.chikachow.org/token
   resource:
     description: GitHub repository API URI to request. Defaults to https://api.github.com/repos/${GITHUB_REPOSITORY}.
     required: false
