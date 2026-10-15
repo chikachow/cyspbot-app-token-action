@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "bundle": "node --run clean && tsdown",
-    "check": "node --run lockfile:check && node --run peer-dependencies:check && node --run dedupe:check && node --run format:check && node --run lint && node --run typecheck && node --run test && node --run bundle",
+    "check": "node --run pnpm:check && node --run lockfile:check && node --run peer-dependencies:check && node --run dedupe:check && node --run format:check && node --run lint && node --run typecheck && node --run test && node --run bundle",
     "clean": "rm -rf dist",
     "dedupe:check": "pnpm dedupe --check --ignore-scripts",
     "format": "oxfmt . '!dist'",
@@ -14,7 +14,8 @@
     "lint": "oxlint --type-aware --report-unused-disable-directives --ignore-pattern dist .",
     "lint:fix": "oxlint --type-aware --fix --ignore-pattern dist .",
     "lockfile:check": "pnpm install --lockfile-only --frozen-lockfile",
-    "peer-dependencies:check": "pnpm install --resolution-only --strict-peer-dependencies --no-frozen-lockfile --ignore-scripts",
+    "peer-dependencies:check": "pnpm peers check",
+    "pnpm:check": "node scripts/check-pnpm.mjs",
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -32,16 +33,8 @@
     "tsdown": "0.23.1",
     "typescript": "7.0.2"
   },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "10.33.0",
-      "onFail": "error"
-    }
-  },
   "engines": {
-    "node": "24",
-    "pnpm": "10.33.0"
+    "node": "24"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@12.11.2"
 }
