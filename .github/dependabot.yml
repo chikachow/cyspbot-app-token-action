@@ -21,7 +21,7 @@ updates:
       time: "16:30"
       timezone: "Australia/Sydney"
     cooldown:
-      default-days: 2
+      default-days: 3
     open-pull-requests-limit: 10
     versioning-strategy: increase
     commit-message:

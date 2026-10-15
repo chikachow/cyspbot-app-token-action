@@ -4,7 +4,14 @@ packages:
 autoInstallPeers: false
 strictPeerDependencies: false
 engineStrict: true
-minimumReleaseAge: 1440
-minimumReleaseAgeStrict: true
-pmOnFail: error
+minimumReleaseAge: 4320
+
+# Corepack and CI select the manifest pin; keep GitHub-compatible lockfiles.
+pmOnFail: ignore
+autoDedupe: true
+lockfile:
+  includeResolutionSettings: true
 verifyDepsBeforeRun: error
+
+allowBuilds: {}
+strictDepBuilds: true

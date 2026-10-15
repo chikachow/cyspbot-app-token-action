@@ -32,8 +32,8 @@ pnpm run check
 - the release bundle still builds from source
 
 Dependency updates permit intermediate peer conflicts with automatic peer
-installation disabled. `peer-dependencies:check` re-runs resolution with strict
-validation and lifecycle scripts disabled; a frozen install alone is insufficient.
+installation disabled. `peer-dependencies:check` runs `pnpm peers check` without
+changing the lockfile; a frozen install alone is insufficient.
 `dedupe:check` fails when pnpm could consolidate the lockfile without editing it.
 Run `pnpm dedupe --ignore-scripts` to apply deduplication and review the result.
 CI rejects lockfile changes produced by validation. Node declarations stay on
@@ -45,7 +45,7 @@ Node 24, and Dependabot leaves major upgrades for the runtime upgrade.
 - The runtime artifact is bundled into `dist/index.js` on release publication, so consumers do not depend on install steps or runtime `node_modules` resolution.
 - The bundle is built with `tsdown`, configured to keep the GitHub Action artifact self-contained even though `tsdown` defaults are library-oriented.
 - TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`, with local overrides only for repo-specific concerns such as test-time `.ts` imports and full library typechecking.
-- pnpm configuration is enforced from `package.json` and `pnpm-workspace.yaml`: the repo declares Node and pnpm versions, installs fail on a mismatched pnpm version, respect dependency `engines` metadata, fail when `node_modules` is stale for `pnpm run` and `pnpm exec`, and reject packages published less than 24 hours ago.
+- Dependency tooling follows the policy below; the exact pnpm version comes from `packageManager`.
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.
 - CI verifies that source changes still build into a release artifact and that the workflows stay valid.
 - The `release` workflow determines the next stable `vX.Y.Z` from conventional commits since the highest existing release tag, then dispatches `prepare-release`.
@@ -78,3 +78,26 @@ After changing `src/`:
 `v1.2.3` is the stable release tag.
 `v1.2.3-rc.1` is an `rc` prerelease tag.
 `v1.2` and `v1` are compatibility tags that move forward on stable releases.
+
+## Dependency tooling
+
+Use Node 24 with Corepack shims first on `PATH` (`corepack enable`), then run
+`corepack pnpm` from this repository's directory. `packageManager`
+is the single pnpm version pin. CI installs that version with `pnpm/action-setup`,
+prepends Corepack shims to `PATH`, and runs `node --run pnpm:check` before dependency
+commands. Shims also select the correct version for nested script invocations. Direct global pnpm
+invocations do not enforce the pin: `pmOnFail: ignore` keeps the lockfile as one
+YAML document for GitHub's dependency graph. Adding config dependencies requires
+reviewing that compatibility assumption.
+
+`autoDedupe` consolidates compatible resolutions during updates, including across
+workspace projects outside a command's filter. Frozen installs leave the graph
+unchanged; `lockfile.includeResolutionSettings` records the selected deduplication
+and linking settings. Keep the frozen-lockfile, peer and dedupe validation gates.
+`verifyDepsBeforeRun: error` stops pnpm scripts when dependencies are stale; it
+does not guard `node --run`, so install explicitly before validation.
+
+Dependency resolution uses a three-day release age, aligned with npm Dependabot
+cooldown where configured. Frozen installs also verify lockfile supply-chain
+policy. Dependency build scripts require explicit `allowBuilds` decisions;
+`strictDepBuilds` rejects unreviewed builds.
