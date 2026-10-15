@@ -24,11 +24,20 @@ pnpm run check
 
 `pnpm run check` verifies:
 
+- frozen manifest/lockfile consistency, strict peer requirements, and deduplication
 - formatting
 - lint
 - typecheck
 - tests
 - the release bundle still builds from source
+
+Dependency updates permit intermediate peer conflicts with automatic peer
+installation disabled. `peer-dependencies:check` re-runs resolution with strict
+validation and lifecycle scripts disabled; a frozen install alone is insufficient.
+`dedupe:check` fails when pnpm could consolidate the lockfile without editing it.
+Run `pnpm dedupe --ignore-scripts` to apply deduplication and review the result.
+CI rejects lockfile changes produced by validation. Node declarations stay on
+Node 24, and Dependabot leaves major upgrades for the runtime upgrade.
 
 ## Engineering conventions
 
