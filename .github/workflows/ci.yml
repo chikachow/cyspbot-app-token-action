@@ -30,6 +30,8 @@ jobs:
 
       - run: pnpm run check
 
+      - run: git diff --exit-code -- pnpm-lock.yaml
+
   actionlint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
