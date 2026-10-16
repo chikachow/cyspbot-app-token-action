@@ -102,6 +102,13 @@ Run `pnpm dedupe --ignore-scripts` to apply deduplication and review the result.
 CI rejects lockfile changes produced by validation. Node declarations stay on
 Node 24, and Dependabot leaves major upgrades for the runtime upgrade.
 
+The scheduled `pnpm-up` workflow updates pnpm to the latest stable release,
+including new majors, using the same release-age policy. The step explicitly
+forwards that policy because `self-update` ignores project release-age settings.
+It overrides `pmOnFail` for this command so the manifest pin is updated. A changed
+`packageManager` pin is committed before dependencies are updated with that
+version; unchanged pins do not create empty commits.
+
 `autoDedupe` consolidates compatible resolutions during updates, including across
 workspace projects outside a command's filter. Frozen installs leave the graph
 unchanged; `lockfile.includeResolutionSettings` records the selected deduplication
