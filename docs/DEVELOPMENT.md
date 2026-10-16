@@ -33,13 +33,8 @@ pnpm run check
 - tests
 - the release bundle still builds from source
 
-Dependency updates permit intermediate peer conflicts with automatic peer
-installation disabled. `peer-dependencies:check` runs `pnpm peers check` without
-changing the lockfile; a frozen install alone is insufficient.
-`dedupe:check` fails when pnpm could consolidate the lockfile without editing it.
-Run `pnpm dedupe --ignore-scripts` to apply deduplication and review the result.
-CI rejects lockfile changes produced by validation. Node declarations stay on
-Node 24, and Dependabot leaves major upgrades for the runtime upgrade.
+See [dependency tooling](#dependency-tooling) for the dependency update policy
+and validation gates.
 
 ## Engineering conventions
 
@@ -99,10 +94,18 @@ check. `pmOnFail: ignore` keeps the lockfile as one YAML document for GitHub's
 dependency graph; direct pnpm commands do not automatically select or enforce the
 pin. Adding config dependencies requires reviewing that compatibility assumption.
 
+Dependency updates permit intermediate peer conflicts with automatic peer
+installation disabled. `peer-dependencies:check` runs `pnpm peers check` without
+changing the lockfile; a frozen install alone is insufficient.
+`dedupe:check` fails when pnpm could consolidate the lockfile without editing it.
+Run `pnpm dedupe --ignore-scripts` to apply deduplication and review the result.
+CI rejects lockfile changes produced by validation. Node declarations stay on
+Node 24, and Dependabot leaves major upgrades for the runtime upgrade.
+
 `autoDedupe` consolidates compatible resolutions during updates, including across
 workspace projects outside a command's filter. Frozen installs leave the graph
 unchanged; `lockfile.includeResolutionSettings` records the selected deduplication
-and linking settings. Keep the frozen-lockfile, peer and dedupe validation gates.
+and linking settings.
 `verifyDepsBeforeRun: error` stops pnpm scripts when dependencies are stale; it
 does not guard `node --run`, so install explicitly before validation.
 
