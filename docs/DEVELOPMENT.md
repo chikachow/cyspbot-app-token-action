@@ -15,6 +15,8 @@ For repository structure, runtime contract, and ownership boundaries, see [`REPO
 
 ## Common commands
 
+Install the [pinned pnpm version](#dependency-tooling) first.
+
 ```bash
 pnpm install
 pnpm run test
@@ -81,14 +83,21 @@ After changing `src/`:
 
 ## Dependency tooling
 
-Use Node 24 with Corepack shims first on `PATH` (`corepack enable`), then run
-`corepack pnpm` from this repository's directory. `packageManager`
-is the single pnpm version pin. CI installs that version with `pnpm/action-setup`,
-prepends Corepack shims to `PATH`, and runs `node --run pnpm:check` before dependency
-commands. Shims also select the correct version for nested script invocations. Direct global pnpm
-invocations do not enforce the pin: `pmOnFail: ignore` keeps the lockfile as one
-YAML document for GitHub's dependency graph. Adding config dependencies requires
-reviewing that compatibility assumption.
+Use Node 24 and the exact pnpm version in `packageManager`. Install it from the
+repository root, then verify it before installing dependencies. When migrating
+an existing Corepack installation, run `corepack disable pnpm` once first to
+remove its pnpm shims.
+
+```bash
+npm install --global "$(node -p 'require("./package.json").packageManager')"
+node --run pnpm:check
+pnpm install --frozen-lockfile
+```
+
+CI installs the manifest pin with `pnpm/action-setup` and runs the same version
+check. `pmOnFail: ignore` keeps the lockfile as one YAML document for GitHub's
+dependency graph; direct pnpm commands do not automatically select or enforce the
+pin. Adding config dependencies requires reviewing that compatibility assumption.
 
 `autoDedupe` consolidates compatible resolutions during updates, including across
 workspace projects outside a command's filter. Frozen installs leave the graph
