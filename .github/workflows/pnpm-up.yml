@@ -28,12 +28,15 @@ jobs:
 
       - run: |
           # self-update ignores project release-age settings; forward the policy explicitly.
-          pnpm --pm-on-fail=error --config.minimumReleaseAge="$(pnpm config get minimumReleaseAge)" self-update
+          # Preserve the workspace policy to keep a single-document lockfile.
+          pnpm --config.minimumReleaseAge="$(pnpm config get minimumReleaseAge)" self-update
           if ! git diff --quiet -- package.json; then
             git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
               commit -m "chore(deps-dev): update pnpm" -- package.json
           fi
+
+      - run: node --run pnpm:check
 
       - run: pnpm up -r --lockfile-only
 
