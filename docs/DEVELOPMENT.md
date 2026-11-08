@@ -53,6 +53,11 @@ and validation gates.
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.
 - CI verifies that source changes still build into a release artifact and that the workflows stay valid.
 - The `release` workflow determines the next stable `vX.Y.Z` from conventional commits since the highest existing release tag, then dispatches `prepare-release`.
+- Release preparation refuses byte-identical `dist/index.js` and `action.yml`.
+  Stable releases compare with the latest stable tag; RCs compare with the latest
+  RC for that version, falling back to the latest stable tag. The first release
+  is allowed when no predecessor exists. Preparation derives this comparison for
+  both workflow entrypoints; `previous-version` affects release notes only.
 - The `prepare-release` workflow creates a release-only commit containing `dist/index.js`, tags it with the requested release version, moves the plain compatibility tags `vX.Y` and `vX` for stable releases, and publishes a GitHub Release with generated notes.
 - Consumers should pin a specific release tag or a maintained compatibility tag such as `v0`, not `main`.
 
