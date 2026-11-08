@@ -16,7 +16,7 @@
     "lockfile:check": "pnpm install --lockfile-only --frozen-lockfile",
     "peer-dependencies:check": "pnpm peers check",
     "pnpm:check": "node scripts/check-pnpm.mjs",
-    "test": "node --test test/*.test.ts",
+    "test": "node --test test/*.test.*",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
