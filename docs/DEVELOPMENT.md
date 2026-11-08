@@ -31,7 +31,8 @@ pnpm run check
 - lint
 - typecheck
 - tests
-- the release bundle still builds from source
+- the release bundle builds as one file and its static imports, re-exports, dynamic
+  imports, and recognized CommonJS loaders load only literal Node built-ins
 
 See [dependency tooling](#dependency-tooling) for the dependency update policy
 and validation gates.
@@ -40,7 +41,13 @@ and validation gates.
 
 - The action uses GitHub's OIDC support through `@actions/core.getIDToken(...)` instead of manually reading undocumented internals.
 - The runtime artifact is bundled into `dist/index.js` on release publication, so consumers do not depend on install steps or runtime `node_modules` resolution.
-- The bundle is built with `tsdown`, configured to keep the GitHub Action artifact self-contained even though `tsdown` defaults are library-oriented.
+- `tsdown` bundles dependencies and checks the final artifact using its JavaScript
+  parser. Named `createRequire` loaders and the bundler shim may be called directly
+  with literal built-ins; computed specifiers, escaping loader references, and
+  unsupported factory uses fail verification. Module namespace loads and internal
+  `Module`/`_load` access are unsupported. Comments and strings are ignored.
+  This build check covers module-loading syntax, not arbitrary evaluated JavaScript. Dependency inventory is governed by the manifest and
+  lockfile rather than a second list in the bundler configuration.
 - TypeScript extends `@tsconfig/recommended`, `@tsconfig/node24`, and `@tsconfig/strictest`, with local overrides only for repo-specific concerns such as test-time `.ts` imports and full library typechecking.
 - Dependency tooling follows the policy below; the exact pnpm version comes from `packageManager`.
 - Tests run on Node's built-in `node:test` runner instead of a third-party test framework.

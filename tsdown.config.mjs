@@ -1,17 +1,12 @@
 import { defineConfig } from "tsdown";
 
+import { verifyBundle } from "./scripts/verify-bundle.mjs";
+
 export default defineConfig({
   clean: false,
   deps: {
     alwaysBundle: [/.*/],
-    onlyBundle: [
-      "@actions/core",
-      "@actions/exec",
-      "@actions/http-client",
-      "@actions/io",
-      "tunnel",
-      "undici",
-    ],
+    onlyBundle: false,
   },
   entry: {
     index: "src/main.ts",
@@ -24,5 +19,6 @@ export default defineConfig({
     };
   },
   platform: "node",
+  plugins: [verifyBundle()],
   target: "node24",
 });
