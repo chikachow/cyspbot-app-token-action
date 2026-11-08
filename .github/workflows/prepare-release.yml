@@ -63,6 +63,11 @@ jobs:
             exit 1
           fi
 
+      - name: Validate artifact changed
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/check-release-artifact.sh
+
       - name: Create release commit
         env:
           VERSION: ${{ inputs.version }}
