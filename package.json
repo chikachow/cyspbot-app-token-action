@@ -23,9 +23,9 @@
     "@actions/core": "3.0.1"
   },
   "devDependencies": {
-    "@tsconfig/node24": "24.0.5",
-    "@tsconfig/recommended": "1.0.13",
-    "@tsconfig/strictest": "2.0.8",
+    "@tsconfig/node24": "24.0.6",
+    "@tsconfig/recommended": "1.0.14",
+    "@tsconfig/strictest": "2.0.9",
     "@types/node": "24.19.2",
     "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
